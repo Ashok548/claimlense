@@ -1,0 +1,108 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: 222 47% 4%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 7%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 7%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 222 47% 4%;
+  --secondary: 217 32% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 32% 12%;
+  --muted-foreground: 215 20% 55%;
+  --accent: 199 89% 48%;
+  --accent-foreground: 222 47% 4%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 32% 16%;
+  --input: 217 32% 16%;
+  --ring: 199 89% 48%;
+  --radius: 0.75rem;
+
+  /* ClaimSmart custom tokens */
+  --payable: 142 76% 36%;
+  --payable-foreground: 142 76% 96%;
+  --partial: 38 92% 50%;
+  --partial-foreground: 38 92% 10%;
+  --not-payable: 0 72% 51%;
+  --not-payable-foreground: 210 40% 98%;
+  --verify: 262 83% 58%;
+  --verify-foreground: 210 40% 98%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Payability status colors */
+.status-payable {
+  background-color: hsl(var(--payable) / 0.15);
+  color: hsl(var(--payable));
+  border-color: hsl(var(--payable) / 0.3);
+}
+
+.status-partial {
+  background-color: hsl(var(--partial) / 0.15);
+  color: hsl(var(--partial));
+  border-color: hsl(var(--partial) / 0.3);
+}
+
+.status-not-payable {
+  background-color: hsl(var(--not-payable) / 0.15);
+  color: hsl(var(--not-payable));
+  border-color: hsl(var(--not-payable) / 0.3);
+}
+
+.status-verify {
+  background-color: hsl(var(--verify) / 0.15);
+  color: hsl(var(--verify));
+  border-color: hsl(var(--verify) / 0.3);
+}
+
+/* Glass card effect */
+.glass {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border));
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(262 83% 68%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Step indicator */
+.step-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.step-complete {
+  background: hsl(var(--payable));
+  color: hsl(var(--payable-foreground));
+}
+
+.step-inactive {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--muted)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }

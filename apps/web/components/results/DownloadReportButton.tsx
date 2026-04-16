@@ -1,0 +1,58 @@
+"use client";
+
+import { useState } from "react";
+import { Download, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface Props {
+  analysisId: string;
+}
+
+export function DownloadReportButton({ analysisId }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/reports/${analysisId}/pdf`);
+      if (!res.ok) {
+        throw new Error("Failed to formulate report");
+      }
+      
+      const { download_url } = await res.json();
+      
+      // Perform the download
+      const a = document.createElement("a");
+      a.href = download_url;
+      a.download = `ClaimSmart_Analysis_${analysisId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <Button 
+        variant="outline" 
+        onClick={handleDownload}
+        disabled={loading}
+        className="border-white/10 text-slate-300 hover:text-white glass"
+      >
+        {loading ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <Download className="w-4 h-4 mr-2" />
+        )}
+        {loading ? "Generating..." : "Get PDF Report"}
+      </Button>
+      {error && <span className="text-red-400 text-xs mt-2">{error}</span>}
+    </div>
+  );
+}

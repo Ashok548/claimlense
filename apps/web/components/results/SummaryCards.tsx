@@ -1,0 +1,70 @@
+"use client";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { ReceiptCent, ShieldAlert, BadgeCheck, Activity } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface Props {
+  totalBilled: number;
+  totalPayable: number;
+  totalAtRisk: number;
+  rejectionPct: number;
+}
+
+export function SummaryCards({ totalBilled, totalPayable, totalAtRisk, rejectionPct }: Props) {
+  const cards = [
+    {
+      title: "Total Billed",
+      value: `₹${totalBilled.toLocaleString()}`,
+      icon: ReceiptCent,
+      color: "text-slate-400",
+      bg: "bg-slate-800/50",
+    },
+    {
+      title: "Likely Payable",
+      value: `₹${totalPayable.toLocaleString()}`,
+      icon: BadgeCheck,
+      color: "text-green-400",
+      bg: "bg-green-500/10 border-green-500/20",
+    },
+    {
+      title: "At Risk Amount",
+      value: `₹${totalAtRisk.toLocaleString()}`,
+      icon: ShieldAlert,
+      color: "text-red-400",
+      bg: "bg-red-500/10 border-red-500/20",
+    },
+    {
+      title: "Rejection Risk",
+      value: `${rejectionPct}%`,
+      icon: Activity,
+      color: "text-orange-400",
+      bg: "bg-orange-500/10 border-orange-500/20",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {cards.map((card, i) => (
+        <motion.div
+          key={card.title}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.1 }}
+        >
+          <Card className={`glass border-white/10 ${card.bg}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-slate-300">{card.title}</p>
+                <card.icon className={`w-5 h-5 ${card.color}`} />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                {card.value}
+              </h2>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
+  );
+}

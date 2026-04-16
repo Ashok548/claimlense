@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Alembic Introspected Tables (FastAPI Core) ───────────────────────────────
+
+model alembic_version {
+  version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
+}
+
+model bill_line_items {
+  id               String            @id @db.Uuid
+  analysis_id      String            @db.Uuid
+  description      String
+  billed_amount    Decimal           @db.Decimal(10, 2)
+  payable_amount   Decimal?          @db.Decimal(10, 2)
+  status           payability_status
+  category         String?           @db.VarChar(100)
+  rule_matched     String?           @db.VarChar(200)
+  confidence       Decimal?          @db.Decimal(4, 3)
+  rejection_reason String?
+  recovery_action  String?
+  llm_used         Boolean?
+  claim_analyses   claim_analyses    @relation(fields: [analysis_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model claim_analyses {
+  id                 String            @id @db.Uuid
+  insurer_id         String            @db.Uuid
+  user_ref           String?           @db.Uuid
+  billing_mode       billing_mode?
+  policy_type        policy_type?
+  hospital_type      hospital_type?
+  diagnosis          String?           @db.VarChar(300)
+  sum_insured        Decimal           @db.Decimal(12, 2)
+  room_rent_limit    Decimal?          @db.Decimal(10, 2)
+  total_billed       Decimal?          @db.Decimal(12, 2)
+  total_payable      Decimal?          @db.Decimal(12, 2)
+  total_at_risk      Decimal?          @db.Decimal(12, 2)
+  rejection_rate_pct Decimal?          @db.Decimal(5, 2)
+  action_items       Json?             @db.Json
+  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
+  bill_line_items    bill_line_items[]
+  insurers           insurers          @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model diagnosis_overrides {
+  id                String            @id @db.Uuid
+  diagnosis_keyword String            @db.VarChar(200)
+  item_category     String            @db.VarChar(100)
+  item_keywords     String[]
+  override_status   payability_status
+  payable_pct       Decimal?          @db.Decimal(5, 2)
+  reason            String
+  notes             String?
+}
+
+model exclusion_rules {
+  id               String   @id @db.Uuid
+  category         String   @db.VarChar(100)
+  keywords         String[]
+  rejection_reason String
+  source_circular  String?  @db.VarChar(200)
+  applies_to_all   Boolean?
+}
+
+model insurer_rules {
+  id            String            @id @db.Uuid
+  insurer_id    String            @db.Uuid
+  item_category String            @db.VarChar(100)
+  keywords      String[]
+  verdict       payability_status
+  payable_pct   Decimal?          @db.Decimal(5, 2)
+  reason        String
+  plan_codes    String[]
+  insurers      insurers          @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model insurers {
+  id                String           @id @db.Uuid
+  code              String           @unique @db.VarChar(50)
+  name              String           @db.VarChar(200)
+  logo_url          String?          @db.VarChar(500)
+  plans             Json?            @db.Json
+  room_rent_default Int?
+  is_active         Boolean?
+  claim_analyses    claim_analyses[]
+  insurer_rules     insurer_rules[]
+}
+
+enum billing_mode {
+  itemized
+  package
+  mixed
+}
+
+enum hospital_type {
+  empanelled
+  non_empanelled
+}
+
+enum payability_status {
+  PAYABLE
+  NOT_PAYABLE
+  PARTIALLY_PAYABLE
+  VERIFY_WITH_TPA
+}
+
+enum policy_type {
+  individual
+  floater
+  group
+}
+
+// ─── Auth (NextAuth.js v5) ────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  password      String?
+  emailVerified DateTime?
+  phone         String?   @unique
+  image         String?
+  plan          Plan      @default(FREE)
+  credits       Int       @default(3)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  reports    Report[]
+  jobs       UploadJob[]
+  payments   Payment[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── Business Tables ──────────────────────────────────────────────────────────
+
+model Report {
+  id             String       @id @default(cuid())
+  userId         String
+  analysisId     String       // UUID from FastAPI claim_analyses table
+  insurerName    String
+  insurerCode    String
+  diagnosis      String?
+  totalBilled    Decimal      @db.Decimal(12, 2)
+  totalPayable   Decimal      @db.Decimal(12, 2)
+  totalAtRisk    Decimal      @db.Decimal(12, 2)
+  rejectionPct   Decimal      @db.Decimal(5, 2)
+  pdfR2Key       String?      // R2 object key for generated PDF
+  status         ReportStatus @default(DRAFT)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  payments Payment[]
+
+  @@map("reports")
+}
+
+model UploadJob {
+  id               String    @id @default(cuid())
+  userId           String
+  r2Key            String
+  originalFilename String
+  fileType         FileType
+  status           JobStatus @default(PENDING)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("upload_jobs")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  userId           String
+  reportId         String?
+  razorpayOrderId  String
+  razorpayPaymentId String?
+  amountPaise      Int
+  status           PaymentStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id])
+  report Report? @relation(fields: [reportId], references: [id])
+
+  @@map("payments")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  B2B
+}
+
+enum ReportStatus {
+  DRAFT
+  COMPLETE
+  PAID
+}
+
+enum FileType {
+  PDF
+  IMAGE
+}
+
+enum JobStatus {
+  PENDING
+  PARSED
+  ANALYZED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}

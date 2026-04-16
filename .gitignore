@@ -26,7 +26,7 @@ ENV/
 .DS_Store
 .AppleDouble
 .LSOverride
-
+# apps/web (Removed from ignore list to enable monorepo tracking)
 # Windows
 Thumbs.db
 ehthumbs.db
