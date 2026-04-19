@@ -1,5 +1,10 @@
 """
-seeds/_base.py — Sync SQL upsert helpers for the insurer seed runner.
+seeds/_base.py — Sync SQL upsert helpers for the seed runner.
+
+Covers both global reference-data domains (IRDAI exclusions, keyword sets,
+item categories, diagnosis overrides, room-rent config, billing-mode rules)
+and insurer-specific data (insurer profiles, plans, riders, insurer rules,
+sublimit rules).
 
 Uses a plain synchronous SQLAlchemy engine (psycopg2 / pg8000 driver) so it runs
 as a standalone script without the FastAPI async context. Mirrors the pattern of
@@ -29,6 +34,18 @@ def get_engine() -> sa.engine.Engine:
     # FastAPI uses postgresql+asyncpg://; replace for sync use
     url = raw.replace("postgresql+asyncpg://", "postgresql://")
     return create_engine(url, future=True)
+
+
+def _resolve_insurer_id(conn: sa.engine.Connection, insurer_code: str | None) -> str | None:
+    if not insurer_code:
+        return None
+    row = conn.execute(
+        text("SELECT id FROM insurers WHERE code = :code"),
+        {"code": insurer_code},
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"insurer '{insurer_code}' not found in insurers table")
+    return str(row.id)
 
 
 # ─── Insurer ──────────────────────────────────────────────────────────────────
@@ -191,6 +208,232 @@ def _resolve_kw_set_id(conn: sa.engine.Connection, name: str | None) -> str | No
         logger.warning("keyword_set '%s' not found in DB — clause will have NULL fallback_kw_set_id", name)
         return None
     return str(row.id)
+
+
+def upsert_exclusion_rules(conn: sa.engine.Connection, rules: list[dict]) -> None:
+    """Replace all universal exclusion rules (applies_to_all=true)."""
+    conn.execute(
+        text("DELETE FROM exclusion_rules WHERE applies_to_all = true"),
+    )
+    for rule in rules:
+        conn.execute(
+            text("""
+                INSERT INTO exclusion_rules (
+                    id, category, keywords, rejection_reason, source_circular, applies_to_all
+                )
+                VALUES (
+                    :id, :category, :keywords, :rejection_reason, :source_circular, :applies_to_all
+                )
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "category": rule["category"],
+                "keywords": rule["keywords"],
+                "rejection_reason": rule["rejection_reason"],
+                "source_circular": rule.get("source_circular"),
+                "applies_to_all": rule.get("applies_to_all", True),
+            },
+        )
+
+
+def upsert_keyword_sets(conn: sa.engine.Connection, keyword_sets: list[dict]) -> None:
+    """Upsert named keyword sets by unique name."""
+    for keyword_set in keyword_sets:
+        conn.execute(
+            text("""
+                INSERT INTO keyword_sets (id, name, keywords, description, is_system)
+                VALUES (:id, :name, :keywords, :description, :is_system)
+                ON CONFLICT (name) DO UPDATE SET
+                    keywords = EXCLUDED.keywords,
+                    description = EXCLUDED.description,
+                    is_system = EXCLUDED.is_system
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "name": keyword_set["name"],
+                "keywords": keyword_set["keywords"],
+                "description": keyword_set.get("description"),
+                "is_system": keyword_set.get("is_system", False),
+            },
+        )
+
+
+def upsert_item_categories(conn: sa.engine.Connection, categories: list[dict]) -> None:
+    """Upsert canonical item categories by primary-key code."""
+    for category in categories:
+        conn.execute(
+            text("""
+                INSERT INTO item_categories (
+                    code, display_name, description, never_excluded,
+                    is_payable_by_default, llm_examples, recovery_template
+                )
+                VALUES (
+                    :code, :display_name, :description, :never_excluded,
+                    :is_payable_by_default, :llm_examples, :recovery_template
+                )
+                ON CONFLICT (code) DO UPDATE SET
+                    display_name = EXCLUDED.display_name,
+                    description = EXCLUDED.description,
+                    never_excluded = EXCLUDED.never_excluded,
+                    is_payable_by_default = EXCLUDED.is_payable_by_default,
+                    llm_examples = EXCLUDED.llm_examples,
+                    recovery_template = EXCLUDED.recovery_template
+            """),
+            {
+                "code": category["code"],
+                "display_name": category["display_name"],
+                "description": category.get("description"),
+                "never_excluded": category.get("never_excluded", False),
+                "is_payable_by_default": category.get("is_payable_by_default", False),
+                "llm_examples": category.get("llm_examples") or [],
+                "recovery_template": category.get("recovery_template"),
+            },
+        )
+
+
+def upsert_diagnosis_overrides(conn: sa.engine.Connection, overrides: list[dict]) -> None:
+    """Replace all diagnosis overrides.
+
+    The diagnosis_overrides table has no insurer_id or scope column — it is
+    entirely owned by the reference seed layer. The full-table DELETE is
+    intentional: insurer-specific overrides are not modelled here.
+    """
+    conn.execute(text("DELETE FROM diagnosis_overrides"))
+    for override in overrides:
+        conn.execute(
+            text("""
+                INSERT INTO diagnosis_overrides (
+                    id, diagnosis_keyword, item_category, item_keywords,
+                    override_status, payable_pct, reason, notes
+                )
+                VALUES (
+                    :id, :diagnosis_keyword, :item_category, :item_keywords,
+                    :override_status, :payable_pct, :reason, :notes
+                )
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "diagnosis_keyword": override["diagnosis_keyword"],
+                "item_category": override["item_category"],
+                "item_keywords": override["item_keywords"],
+                "override_status": override["override_status"],
+                "payable_pct": override.get("payable_pct"),
+                "reason": override["reason"],
+                "notes": override.get("notes"),
+            },
+        )
+
+
+def upsert_diagnosis_synonym_groups(conn: sa.engine.Connection, groups: list[dict]) -> None:
+    """Upsert diagnosis synonym groups by unique base_term."""
+    for group in groups:
+        conn.execute(
+            text("""
+                INSERT INTO diagnosis_synonym_groups (id, base_term, synonyms)
+                VALUES (:id, :base_term, :synonyms)
+                ON CONFLICT (base_term) DO UPDATE SET
+                    synonyms = EXCLUDED.synonyms
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "base_term": group["base_term"],
+                "synonyms": group.get("synonyms") or [],
+            },
+        )
+
+
+def upsert_room_rent_config(conn: sa.engine.Connection, configs: list[dict]) -> None:
+    """Replace all room_rent_config rows owned by the reference seed layer."""
+    owned_insurer_ids = {
+        _resolve_insurer_id(conn, config.get("insurer_code"))
+        for config in configs
+    }
+    for insurer_id in owned_insurer_ids:
+        if insurer_id is None:
+            conn.execute(text("DELETE FROM room_rent_config WHERE insurer_id IS NULL"))
+        else:
+            conn.execute(
+                text("DELETE FROM room_rent_config WHERE insurer_id = :insurer_id"),
+                {"insurer_id": insurer_id},
+            )
+
+    for config in configs:
+        insurer_id = _resolve_insurer_id(conn, config.get("insurer_code"))
+        detection_kw_set_id = _resolve_kw_set_id(conn, config["detection_kw_set_name"])
+        icu_kw_set_id = _resolve_kw_set_id(conn, config["icu_kw_set_name"])
+        if detection_kw_set_id is None or icu_kw_set_id is None:
+            raise ValueError("room_rent_config references missing keyword set")
+
+        conn.execute(
+            text("""
+                INSERT INTO room_rent_config (
+                    id, insurer_id, plan_codes, detection_kw_set_id, icu_kw_set_id,
+                    deduction_method, icu_deduction_separate, priority
+                )
+                VALUES (
+                    :id, :insurer_id, :plan_codes, :detection_kw_set_id, :icu_kw_set_id,
+                    :deduction_method, :icu_deduction_separate, :priority
+                )
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "insurer_id": insurer_id,
+                "plan_codes": config.get("plan_codes"),
+                "detection_kw_set_id": detection_kw_set_id,
+                "icu_kw_set_id": icu_kw_set_id,
+                "deduction_method": config.get("deduction_method", "proportional"),
+                "icu_deduction_separate": config.get("icu_deduction_separate", True),
+                "priority": config.get("priority", 0),
+            },
+        )
+
+
+def upsert_billing_mode_rules(conn: sa.engine.Connection, rules: list[dict]) -> None:
+    """Replace all billing_mode_rules rows owned by the reference seed layer."""
+    owned_insurer_ids = {
+        _resolve_insurer_id(conn, rule.get("insurer_code"))
+        for rule in rules
+    }
+    for insurer_id in owned_insurer_ids:
+        if insurer_id is None:
+            conn.execute(text("DELETE FROM billing_mode_rules WHERE insurer_id IS NULL"))
+        else:
+            conn.execute(
+                text("DELETE FROM billing_mode_rules WHERE insurer_id = :insurer_id"),
+                {"insurer_id": insurer_id},
+            )
+
+    for rule in rules:
+        insurer_id = _resolve_insurer_id(conn, rule.get("insurer_code"))
+        fallback_kw_set_id = _resolve_kw_set_id(conn, rule.get("fallback_kw_set_name"))
+        conn.execute(
+            text("""
+                INSERT INTO billing_mode_rules (
+                    id, insurer_id, plan_codes, item_category, billing_mode, verdict,
+                    payable_pct, reason, recovery, fallback_kw_set_id, priority,
+                    bypass_categories
+                )
+                VALUES (
+                    :id, :insurer_id, :plan_codes, :item_category, :billing_mode, :verdict,
+                    :payable_pct, :reason, :recovery, :fallback_kw_set_id, :priority,
+                    :bypass_categories
+                )
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "insurer_id": insurer_id,
+                "plan_codes": rule.get("plan_codes"),
+                "item_category": rule["item_category"],
+                "billing_mode": rule["billing_mode"],
+                "verdict": rule["verdict"],
+                "payable_pct": rule.get("payable_pct"),
+                "reason": rule["reason"],
+                "recovery": rule.get("recovery"),
+                "fallback_kw_set_id": fallback_kw_set_id,
+                "priority": rule.get("priority", 0),
+                "bypass_categories": rule.get("bypass_categories"),
+            },
+        )
 
 
 def upsert_rider_clauses(

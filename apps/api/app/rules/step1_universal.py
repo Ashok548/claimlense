@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ExclusionRule
 from app.schemas import AnalyzedLineItem, BillItemInput, ConfidenceBasis, PayabilityStatus
+from app.rules._shared import contains_phrase, normalize_text
 
 
 async def load_universal_exclusion_rules(db: AsyncSession) -> list:
@@ -55,7 +56,7 @@ def check_universal_exclusions(
     if item_category and _is_never_excluded(item_category, item_categories):
         return None
 
-    desc_lower = item.description.lower()
+    desc_norm = normalize_text(item.description)
 
     for rule in rules:
         # Primary: category equality match (LLM-assigned category agrees with rule)
@@ -78,7 +79,7 @@ def check_universal_exclusions(
         # Fallback: keyword substring match (used when item_category is None/UNCLASSIFIED)
         if not item_category or item_category == "UNCLASSIFIED":
             for keyword in rule.keywords:
-                if keyword.lower() in desc_lower:
+                if contains_phrase(desc_norm, normalize_text(keyword)):
                     return AnalyzedLineItem(
                         id=_new_id(),
                         description=item.description,

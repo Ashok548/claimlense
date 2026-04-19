@@ -1,1 +1,1 @@
-# seeds package — insurer data seed layer
+# seeds package — reference-data and insurer seed layers

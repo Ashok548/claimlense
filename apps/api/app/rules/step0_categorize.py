@@ -38,7 +38,10 @@ logger = logging.getLogger(__name__)
 VALID_CATEGORIES: frozenset[str] = frozenset({
     "CONSUMABLE", "DIAGNOSTIC_TEST", "DRUG", "IMPLANT", "PROCEDURE",
     "ROOM_RENT", "ADMIN", "NON_MEDICAL", "ATTENDANT", "EQUIPMENT_RENTAL",
-    "EXTERNAL_PHARMACY", "COSMETIC", "UNCLASSIFIED",
+    "EXTERNAL_PHARMACY", "COSMETIC", "MODERN_TREATMENT", "CATARACT_PACKAGE",
+    "CONSUMABLE_OVERRIDE", "CONSUMABLE_SUBLIMIT", "PHARMACY_COPAY",
+    "ROOM_UPGRADE_COPAY", "SURGEON_CONSULTATION", "OPD", "CONSULTATION",
+    "MATERNITY", "DELIVERY", "CRITICAL_ILLNESS", "DENTAL", "UNCLASSIFIED",
 })
 
 SYSTEM_PROMPT = """You are a medical billing classification expert specializing in Indian hospital bills.
@@ -72,6 +75,13 @@ Critical distinctions:
 - "OT kit" or "surgical kit" — CONSUMABLE
 - "Suture" — CONSUMABLE
 - Named drugs like "Ceftriaxone injection", "Paracetamol", "NS 500ml" — DRUG, NOT CONSUMABLE
+- "ECG electrodes" or "electrode pads" — CONSUMABLE (disposable pads, NOT a DIAGNOSTIC_TEST)
+- "Oxygen cylinder outside hospital" — EQUIPMENT_RENTAL (outside-use is excluded)
+- "Sugar free tablets" — NON_MEDICAL (comfort item, not prescribed medication)
+- "Blood grouping of donors" — ADMIN (donor-side process, not patient diagnostic test)
+- "Ambulance equipment" — EQUIPMENT_RENTAL (equipment separately billed, not the ambulance ride)
+- "Vasofix" or "Abbocath" or cannula brand names — CONSUMABLE (IV access devices)
+- "Delivery kit" or "Ortho kit" or "Recovery kit" with no details — CONSUMABLE
 
 Return ONLY the JSON object. No explanation."""
 
@@ -116,6 +126,13 @@ Critical distinctions:
 - "Phaco machine charge" for cataract — PROCEDURE, NOT EQUIPMENT_RENTAL
 - "OT kit" / "surgical kit" — CONSUMABLE
 - Named drugs — DRUG, NOT CONSUMABLE
+- "ECG electrodes" or "electrode pads" — CONSUMABLE (disposable pads, NOT a DIAGNOSTIC_TEST)
+- "Oxygen cylinder outside hospital" — EQUIPMENT_RENTAL (outside-use is excluded)
+- "Sugar free tablets" — NON_MEDICAL (comfort item, not prescribed medication)
+- "Blood grouping of donors" — ADMIN (donor-side process, not patient diagnostic test)
+- "Ambulance equipment" — EQUIPMENT_RENTAL (equipment separately billed, not the ambulance ride)
+- "Vasofix" or "Abbocath" or cannula brand names — CONSUMABLE (IV access devices)
+- "Delivery kit" or "Ortho kit" or "Recovery kit" with no details — CONSUMABLE
 
 Return ONLY the JSON object. No explanation."""
 
@@ -131,9 +148,16 @@ def build_step0_prompt(categories: list) -> str:
     codes_lines = []
     example_lines = []
     for cat in categories:
-        if cat.code == "UNCLASSIFIED":
+        if cat.code in {
+            "UNCLASSIFIED",
+            "CONSUMABLE_OVERRIDE",
+            "CONSUMABLE_SUBLIMIT",
+            "PHARMACY_COPAY",
+            "ROOM_UPGRADE_COPAY"
+        }:
             continue
-        examples = ", ".join((cat.llm_examples or [])[:5]) or "—"
+        # Allow expanding more examples
+        examples = ", ".join((cat.llm_examples or [])[:12]) or "—"
         codes_lines.append(f"- {cat.code}: {cat.description or cat.display_name}")
         example_lines.append(f"- {cat.code}: {examples}")
 

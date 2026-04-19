@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas import AnalyzedLineItem, BillItemInput, BillingMode, ConfidenceBasis, PayabilityStatus
+from app.rules._shared import contains_phrase, normalize_text
 
 # Compile-time fallback keyword list used when billing_mode_rules table is empty.
 # Mirrors the CONSUMABLE_BILLING_MODE keyword_set seeded in migration 011.
@@ -113,8 +114,8 @@ def check_billing_mode(
             ),
         )
 
-    desc_lower = item.description.lower()
-    matched_kw = next((kw for kw in CONSUMABLE_KEYWORDS if kw in desc_lower), None)
+    desc_norm = normalize_text(item.description)
+    matched_kw = next((kw for kw in CONSUMABLE_KEYWORDS if contains_phrase(desc_norm, normalize_text(kw))), None)
     if matched_kw:
         return _build_result(
             item, "CONSUMABLE_IN_PACKAGE",
@@ -136,7 +137,7 @@ def _check_with_rules(
     item_category: str | None,
 ) -> AnalyzedLineItem | None:
     """Generic rule-table path: iterate rules in priority order."""
-    desc_lower = item.description.lower()
+    desc_norm = normalize_text(item.description)
     mode_value = billing_mode.value
 
     for rule in billing_mode_rules:
@@ -154,7 +155,7 @@ def _check_with_rules(
         if matched_key is None and rule.fallback_kw_set:
             if not item_category or item_category == "UNCLASSIFIED":
                 hit = next(
-                    (kw for kw in rule.fallback_kw_set.keywords if kw in desc_lower),
+                    (kw for kw in rule.fallback_kw_set.keywords if contains_phrase(desc_norm, normalize_text(kw))),
                     None,
                 )
                 if hit:
@@ -217,8 +218,8 @@ def _check_mixed_mode(
     """
     is_consumable = item_category == "CONSUMABLE"
     if not is_consumable:
-        desc_lower = item.description.lower()
-        is_consumable = any(kw in desc_lower for kw in CONSUMABLE_KEYWORDS)
+        desc_norm = normalize_text(item.description)
+        is_consumable = any(contains_phrase(desc_norm, normalize_text(kw)) for kw in CONSUMABLE_KEYWORDS)
 
     if not is_consumable:
         return None

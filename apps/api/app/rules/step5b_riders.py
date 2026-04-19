@@ -26,6 +26,7 @@ from app.models import Plan, Rider
 
 logger = logging.getLogger(__name__)
 from app.schemas import AnalyzedLineItem, BillItemInput, PayabilityStatus, ConfidenceBasis
+from app.rules._shared import contains_phrase, normalize_text
 import uuid
 
 # ─── Compile-time fallback category sets (used as legacy path only) ─────────────
@@ -182,14 +183,14 @@ def check_rider_and_plan_coverage(
     if current_result is not None and current_result.status == PayabilityStatus.PAYABLE:
         return current_result
 
-    desc_lower = item.description.lower()
+    desc_norm = normalize_text(item.description)
 
     # ── Plan-level consumables override (DB column — always config-driven) ─────────
     if current_result and current_result.status != PayabilityStatus.PAYABLE:
         is_consumable = (
             category in CONSUMABLE_CATEGORIES
             if category and category not in ("UNCLASSIFIED", None)
-            else any(k in desc_lower for k in ["gloves", "syringe", "mask", "disposable", "consumable"])
+            else any(contains_phrase(desc_norm, normalize_text(k)) for k in ["gloves", "syringe", "mask", "disposable", "consumable"])
         )
         if is_consumable and plan.consumables_covered:
             return _mark_payable(
@@ -203,7 +204,7 @@ def check_rider_and_plan_coverage(
 
     if rider_clauses:
         return _check_with_clauses(
-            item, current_result, rider_by_id, rider_clauses, category, desc_lower, rider_remaining
+            item, current_result, rider_by_id, rider_clauses, category, desc_norm, rider_remaining
         )
 
     # No clause rows loaded — warn loudly instead of silently activating hardcoded
@@ -218,7 +219,7 @@ def _check_with_clauses(
     rider_by_id: dict,
     rider_clauses: list,
     category: str | None,
-    desc_lower: str,
+    desc_norm: str,
     rider_remaining: dict | None,
 ) -> AnalyzedLineItem | None:
     """Generic clause-iteration path (config-driven)."""
@@ -241,7 +242,7 @@ def _check_with_clauses(
             matched = category in clause.target_categories
         elif clause.fallback_kw_set:
             # Keyword fallback for UNCLASSIFIED items
-            matched = any(kw in desc_lower for kw in clause.fallback_kw_set.keywords)
+            matched = any(contains_phrase(desc_norm, normalize_text(kw)) for kw in clause.fallback_kw_set.keywords)
 
         if not matched:
             continue
@@ -283,7 +284,7 @@ def _legacy_boolean_check(
     current_result: AnalyzedLineItem | None,
     riders: list[Rider],
     category: str | None,
-    desc_lower: str,
+    desc_norm: str,
     rider_remaining: dict | None,
 ) -> AnalyzedLineItem | None:
     """Original boolean-column check preserved for backward compatibility."""
@@ -292,9 +293,9 @@ def _legacy_boolean_check(
         is_opd = category in OPD_CATEGORIES
         is_maternity = category in MATERNITY_CATEGORIES
     else:
-        is_consumable = any(k in desc_lower for k in ["gloves", "syringe", "mask", "disposable", "consumable"])
-        is_opd = any(k in desc_lower for k in ["opd", "outpatient", "consultation"])
-        is_maternity = any(k in desc_lower for k in MATERNITY_KEYWORDS)
+        is_consumable = any(contains_phrase(desc_norm, normalize_text(k)) for k in ["gloves", "syringe", "mask", "disposable", "consumable"])
+        is_opd = any(contains_phrase(desc_norm, normalize_text(k)) for k in ["opd", "outpatient", "consultation"])
+        is_maternity = any(contains_phrase(desc_norm, normalize_text(k)) for k in MATERNITY_KEYWORDS)
 
     if is_consumable and current_result and current_result.status != PayabilityStatus.PAYABLE:
         for rider in _ordered_riders(riders):

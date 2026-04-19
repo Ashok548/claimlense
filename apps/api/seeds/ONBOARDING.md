@@ -1,3 +1,28 @@
+# Seed System
+
+The backend now has two seed layers:
+
+- `seeds/reference/` for global reference data such as IRDA exclusions, keyword sets,
+  item categories, room-rent defaults, billing-mode rules, and diagnosis config.
+- `seeds/insurers/` for insurer-specific plans, riders, insurer rules, and sublimits.
+
+Run global/reference seeds first, then insurer seeds.
+
+## Common Commands
+
+From `apps/api/`:
+
+```bash
+python seeds/runner.py --list
+python seeds/runner.py --global-only --dry-run
+python seeds/runner.py --global-only
+python seeds/runner.py --domain irdai_exclusions
+python seeds/runner.py --insurer HDFC_ERGO
+python seeds/runner.py
+```
+
+`python seeds/runner.py` now seeds reference domains first, then all insurer modules.
+
 # Onboarding a New Insurer
 
 No Python code changes are required. Adding an insurer is entirely a data task.
