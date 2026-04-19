@@ -21,6 +21,22 @@ class PayabilityStatus(str, Enum):
     VERIFY_WITH_TPA = "VERIFY_WITH_TPA"
 
 
+class ItemCategory(str, Enum):
+    CONSUMABLE = "CONSUMABLE"
+    DIAGNOSTIC_TEST = "DIAGNOSTIC_TEST"
+    DRUG = "DRUG"
+    IMPLANT = "IMPLANT"
+    PROCEDURE = "PROCEDURE"
+    ROOM_RENT = "ROOM_RENT"
+    ADMIN = "ADMIN"
+    NON_MEDICAL = "NON_MEDICAL"
+    ATTENDANT = "ATTENDANT"
+    EQUIPMENT_RENTAL = "EQUIPMENT_RENTAL"
+    EXTERNAL_PHARMACY = "EXTERNAL_PHARMACY"
+    COSMETIC = "COSMETIC"
+    UNCLASSIFIED = "UNCLASSIFIED"
+
+
 class BillingMode(str, Enum):
     ITEMIZED = "itemized"
     PACKAGE = "package"
@@ -102,7 +118,8 @@ class AnalyzedLineItem(BaseModel):
 
 class AnalysisSummary(BaseModel):
     total_billed: float
-    total_payable: float
+    total_payable: float          # PAYABLE + PARTIALLY_PAYABLE items only
+    total_pending_verification: float  # VERIFY_WITH_TPA payable_amount (full billed shown as at-risk)
     total_at_risk: float
     rejection_rate_pct: float
     items_count: int
@@ -167,6 +184,7 @@ class PlanDetail(BaseModel):
     description: str | None = None
     room_rent_limit_pct: float | None = None
     room_rent_limit_abs: float | None = None
+    icu_room_rent_limit_abs: float | None = None
     co_pay_pct: float | None = None
     icu_limit_pct: float | None = None
     consumables_covered: bool = False

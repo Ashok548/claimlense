@@ -86,6 +86,7 @@ class Plan(Base):
     description: Mapped[str | None] = mapped_column(Text)
     room_rent_limit_pct: Mapped[float | None] = mapped_column(Numeric(4, 2))
     room_rent_limit_abs: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    icu_room_rent_limit_abs: Mapped[float | None] = mapped_column(Numeric(10, 2))  # Per-day ICU rate cap
     co_pay_pct: Mapped[float | None] = mapped_column(Numeric(4, 2), default=0)
     icu_limit_pct: Mapped[float | None] = mapped_column(Numeric(4, 2))
     consumables_covered: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -208,6 +209,7 @@ class ClaimAnalysis(Base):
 
     total_billed: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     total_payable: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    total_pending_verification: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     total_at_risk: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     rejection_rate_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0)
 
@@ -246,3 +248,30 @@ class BillLineItem(Base):
     llm_used: Mapped[bool] = mapped_column(Boolean, default=False)
 
     analysis: Mapped["ClaimAnalysis"] = relationship(back_populates="line_items")
+
+
+class SubLimitRule(Base):
+    """
+    Per-claim aggregate sub-limits for specific item categories.
+    Applied after individual verdicts — caps total payable for all matched items.
+    e.g. insurer pays max ₹50,000 for consumables even if item verdicts sum to more.
+    """
+
+    __tablename__ = "sublimit_rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    insurer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("insurers.id"), nullable=False
+    )
+    # Item category this limit applies to (matches Step 0 taxonomy)
+    item_category: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Optional: restrict to specific plan codes (NULL = applies to all plans)
+    plan_codes: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    # Maximum payable across all items of this category in a single claim
+    max_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    # Human-readable note for auditing (e.g. "IRDAI caps consumables at ₹50K under Optima")
+    note: Mapped[str | None] = mapped_column(Text)
+
+    insurer: Mapped["Insurer"] = relationship()

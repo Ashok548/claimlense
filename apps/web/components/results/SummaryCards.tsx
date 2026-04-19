@@ -7,11 +7,12 @@ import { motion } from "framer-motion";
 interface Props {
   totalBilled: number;
   totalPayable: number;
+  totalPendingVerification: number;
   totalAtRisk: number;
   rejectionPct: number;
 }
 
-export function SummaryCards({ totalBilled, totalPayable, totalAtRisk, rejectionPct }: Props) {
+export function SummaryCards({ totalBilled, totalPayable, totalPendingVerification, totalAtRisk, rejectionPct }: Props) {
   const cards = [
     {
       title: "Total Billed",
@@ -21,11 +22,18 @@ export function SummaryCards({ totalBilled, totalPayable, totalAtRisk, rejection
       bg: "bg-slate-800/50",
     },
     {
-      title: "Likely Payable",
+      title: "Confirmed Payable",
       value: `₹${totalPayable.toLocaleString()}`,
       icon: BadgeCheck,
       color: "text-green-400",
       bg: "bg-green-500/10 border-green-500/20",
+    },
+    {
+      title: "Pending Verification",
+      value: `₹${totalPendingVerification.toLocaleString()}`,
+      icon: Activity,
+      color: "text-yellow-400",
+      bg: "bg-yellow-500/10 border-yellow-500/20",
     },
     {
       title: "At Risk Amount",
@@ -44,7 +52,7 @@ export function SummaryCards({ totalBilled, totalPayable, totalAtRisk, rejection
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
       {cards.map((card, i) => (
         <motion.div
           key={card.title}

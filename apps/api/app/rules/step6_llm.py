@@ -85,6 +85,13 @@ async def llm_classify_item(
         status = PayabilityStatus(data.get("status", "VERIFY_WITH_TPA"))
         confidence = float(data.get("confidence", 0.72))
         payable_pct = data.get("payable_pct")
+
+        # If LLM declares PARTIALLY_PAYABLE but omits the percentage, we cannot
+        # compute a reliable payable amount. Downgrade to VERIFY_WITH_TPA so the
+        # item does not inflate the payable total with an unverified full-billed figure.
+        if status == PayabilityStatus.PARTIALLY_PAYABLE and payable_pct is None:
+            status = PayabilityStatus.VERIFY_WITH_TPA
+
         payable = _compute_payable(item.billed_amount, status, payable_pct)
 
         return AnalyzedLineItem(
@@ -112,12 +119,11 @@ def _compute_payable(billed: float, status: PayabilityStatus, payable_pct: float
         return billed
     if status == PayabilityStatus.NOT_PAYABLE:
         return 0.0
-    if status == PayabilityStatus.PARTIALLY_PAYABLE:
-        if payable_pct is not None:
-            return round(billed * (float(payable_pct) / 100), 2)
-        # GPT didn't provide a percentage — show full amount for TPA to decide
-        return billed
-    return billed  # VERIFY_WITH_TPA — show full amount as at-risk
+    if status == PayabilityStatus.PARTIALLY_PAYABLE and payable_pct is not None:
+        return round(billed * (float(payable_pct) / 100), 2)
+    # VERIFY_WITH_TPA (or PARTIALLY_PAYABLE already downgraded before this call)
+    # — show full billed as the at-risk figure visible to the user.
+    return billed
 
 
 def _default_verify(item: BillItemInput) -> AnalyzedLineItem:

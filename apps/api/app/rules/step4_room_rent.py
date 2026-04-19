@@ -44,23 +44,34 @@ def check_room_rent(
     room_rent_limit: float | None,
     icu_days: int | None = None,
     general_ward_days: int | None = None,
-) -> tuple[AnalyzedLineItem | None, float]:
+    icu_room_rent_limit: float | None = None,
+) -> tuple[AnalyzedLineItem | None, float, bool]:
     """
     Returns:
-        (AnalyzedLineItem, deduction_ratio) — if this is a room rent item
-        (None, 1.0) — if not a room rent item
+        (AnalyzedLineItem, deduction_ratio, is_icu_line) — if this is a room rent item
+        (None, 1.0, False) — if not a room rent item
 
-    deduction_ratio: used by engine.py to proportionally reduce all other items.
+    deduction_ratio: used by engine.py to proportionally reduce other items.
+    is_icu_line: True when this item is an ICU charge, so engine.py can track
+                 separate ICU vs ward deduction ratios.
 
-    ICU items use icu_days; general ward/room items use general_ward_days.
-    billed_amount is the total charge for that room type across all days.
-    per_day_rate = billed_amount / relevant_days, compared against room_rent_limit.
+    ICU items: use icu_room_rent_limit when set, else fall back to room_rent_limit.
+    Ward items: always use room_rent_limit.
     """
     if not is_room_rent_item(item.description):
-        return None, 1.0
+        return None, 1.0, False
 
-    # If no room rent limit on the plan, it's fully payable
-    if not room_rent_limit:
+    icu_item = is_icu_item(item.description)
+
+    # Resolve the effective per-day cap for this line item type
+    effective_limit: float | None
+    if icu_item and icu_room_rent_limit:
+        effective_limit = icu_room_rent_limit
+    else:
+        effective_limit = room_rent_limit
+
+    # If no limit applies, it's fully payable
+    if not effective_limit:
         return AnalyzedLineItem(
             id=uuid.uuid4(),
             description=item.description,
@@ -74,17 +85,11 @@ def check_room_rent(
             rejection_reason=None,
             recovery_action=None,
             llm_used=False,
-        ), 1.0
+        ), 1.0, icu_item
 
-    # Determine whether this is an ICU item and pick the right day count.
-    icu_item = is_icu_item(item.description)
     days_for_item: int | None = icu_days if icu_item else general_ward_days
     item_type_label = "ICU/ICCU" if icu_item else "ward"
 
-    # We MUST know the relevant day count to compute a per-day rate from the total.
-    # Without it we cannot compare against the per-day cap; treating the total
-    # as a per-day rate causes massive false rejections (e.g. an 8-day stay
-    # billed as one line item looks like 8x the daily cap).
     if not days_for_item or days_for_item <= 0:
         hint = (
             f"Enter the number of days you stayed in the {item_type_label} so we can "
@@ -102,17 +107,16 @@ def check_room_rent(
             confidence_basis=ConfidenceBasis.CALCULATION,
             rejection_reason=(
                 f"{item_type_label.capitalize()} room charge of ₹{item.billed_amount:,.0f} cannot be verified "
-                f"against the per-day limit of ₹{room_rent_limit:,.0f}/day because the number of "
+                f"against the per-day limit of ₹{effective_limit:,.0f}/day because the number of "
                 f"{item_type_label} days was not provided."
             ),
             recovery_action=hint,
             llm_used=False,
-        ), 1.0  # No proportional deduction when we can't verify
+        ), 1.0, icu_item
 
     per_day_billed = item.billed_amount / days_for_item
 
-    if per_day_billed <= room_rent_limit:
-        # Room rent within limit — fully payable
+    if per_day_billed <= effective_limit:
         return AnalyzedLineItem(
             id=uuid.uuid4(),
             description=item.description,
@@ -126,12 +130,11 @@ def check_room_rent(
             rejection_reason=None,
             recovery_action=None,
             llm_used=False,
-        ), 1.0
+        ), 1.0, icu_item
 
     # Per-day rate EXCEEDS cap
-    total_payable = room_rent_limit * days_for_item
-    deduction_ratio = room_rent_limit / per_day_billed
-
+    total_payable = effective_limit * days_for_item
+    deduction_ratio = effective_limit / per_day_billed
     days_info = f" for {days_for_item} {item_type_label} days"
 
     return AnalyzedLineItem(
@@ -141,22 +144,23 @@ def check_room_rent(
         payable_amount=round(total_payable, 2),
         status=PayabilityStatus.PARTIALLY_PAYABLE,
         category="ROOM_RENT_EXCESS",
-        rule_matched=f"ROOM_RENT:EXCEEDS_LIMIT:{room_rent_limit}",
+        rule_matched=f"ROOM_RENT:EXCEEDS_LIMIT:{effective_limit}",
         confidence=0.99,
         confidence_basis=ConfidenceBasis.CALCULATION,
         rejection_reason=(
             f"Room rent of ₹{per_day_billed:,.0f}/day (₹{item.billed_amount:,.0f}{days_info}) "
-            f"exceeds your policy sub-limit of ₹{room_rent_limit:,.0f}/day. "
+            f"exceeds your policy sub-limit of ₹{effective_limit:,.0f}/day. "
             f"Additionally, all other claim items will be proportionally reduced "
             f"by {round((1 - deduction_ratio) * 100, 1)}% as per insurer policy."
         ),
         recovery_action=(
             f"Before discharge, request the hospital to downgrade your room to "
-            f"the category within ₹{room_rent_limit:,.0f}/day. "
+            f"the category within ₹{effective_limit:,.0f}/day. "
             f"This will also prevent proportional deduction on your entire bill."
         ),
         llm_used=False,
-    ), deduction_ratio
+    ), deduction_ratio, icu_item
+
 
 
 def apply_proportional_deduction(
@@ -169,8 +173,8 @@ def apply_proportional_deduction(
     """
     if deduction_ratio >= 1.0:
         return item
-    if item.status == PayabilityStatus.NOT_PAYABLE:
-        return item  # Already zero — nothing to reduce
+    if item.status in (PayabilityStatus.NOT_PAYABLE, PayabilityStatus.VERIFY_WITH_TPA):
+        return item  # NOT_PAYABLE is already zero; VERIFY items show full billed amount to TPA
 
     reduced_payable = round(item.payable_amount * deduction_ratio, 2)
     reduction_pct = round((1 - deduction_ratio) * 100, 1)

@@ -52,17 +52,18 @@ def check_insurer_rules(
 
         if category_matched:
             payable = _compute_payable(item.billed_amount, rule)
+            effective_status = _effective_status(rule)
             return AnalyzedLineItem(
                 id=uuid.uuid4(),
                 description=item.description,
                 billed_amount=item.billed_amount,
                 payable_amount=payable,
-                status=PayabilityStatus(rule.verdict),
+                status=effective_status,
                 category=rule.item_category,
                 rule_matched=f"INSURER:{rule.item_category}:CATEGORY_MATCH",
                 confidence=0.88,
                 confidence_basis=ConfidenceBasis.INSURER_RULE,
-                rejection_reason=rule.reason if rule.verdict != "PAYABLE" else None,
+                rejection_reason=rule.reason if effective_status != PayabilityStatus.PAYABLE else None,
                 recovery_action=_recovery(rule),
                 llm_used=False,
             )
@@ -72,19 +73,18 @@ def check_insurer_rules(
             for keyword in rule.keywords:
                 if keyword.lower() in desc_lower:
                     payable = _compute_payable(item.billed_amount, rule)
+                    effective_status = _effective_status(rule)
                     return AnalyzedLineItem(
                         id=uuid.uuid4(),
                         description=item.description,
                         billed_amount=item.billed_amount,
                         payable_amount=payable,
-                        status=PayabilityStatus(rule.verdict),
+                        status=effective_status,
                         category=rule.item_category,
                         rule_matched=f"INSURER:{rule.item_category}:{keyword}",
                         confidence=0.85,
                         confidence_basis=ConfidenceBasis.INSURER_RULE,
-                        rejection_reason=rule.reason
-                        if rule.verdict != "PAYABLE"
-                        else None,
+                        rejection_reason=rule.reason if effective_status != PayabilityStatus.PAYABLE else None,
                         recovery_action=_recovery(rule),
                         llm_used=False,
                     )
@@ -99,7 +99,18 @@ def _compute_payable(billed: float, rule: InsurerRule) -> float:
         return 0.0
     if rule.verdict == "PARTIALLY_PAYABLE" and rule.payable_pct:
         return round(billed * (rule.payable_pct / 100), 2)
-    return 0.0
+    # PARTIALLY_PAYABLE with no pct in the DB is a data quality issue.
+    # Return the full billed amount so it appears as VERIFY_WITH_TPA, not silently zeroed.
+    # The caller in check_insurer_rules must downgrade the status when pct is missing.
+    return billed
+
+
+def _effective_status(rule: InsurerRule) -> PayabilityStatus:
+    """Returns the correct status, downgrading PARTIALLY_PAYABLE to VERIFY_WITH_TPA
+    when the payable_pct is missing — avoids silently returning 0 or full billed."""
+    if rule.verdict == "PARTIALLY_PAYABLE" and not rule.payable_pct:
+        return PayabilityStatus.VERIFY_WITH_TPA
+    return PayabilityStatus(rule.verdict)
 
 
 def _recovery(rule: InsurerRule) -> str | None:

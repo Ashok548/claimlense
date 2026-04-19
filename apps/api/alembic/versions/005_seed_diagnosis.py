@@ -17,7 +17,7 @@ DIAGNOSIS_OVERRIDES = [
     # ── Cataract ─────────────────────────────────────────────────────────────
     {
         "diagnosis_keyword": "cataract",
-        "item_category": "CATARACT_PROCEDURE",
+        "item_category": "PROCEDURE",
         "item_keywords": ["phaco", "phacoemulsification", "phaco machine", "iol", "intraocular lens", "lens implant"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -31,7 +31,7 @@ DIAGNOSIS_OVERRIDES = [
     # ── Knee / Hip Replacement ────────────────────────────────────────────────
     {
         "diagnosis_keyword": "knee replacement",
-        "item_category": "ORTHOPEDIC_IMPLANT",
+        "item_category": "IMPLANT",
         "item_keywords": ["implant", "knee implant", "prosthesis", "knee prosthesis", "tibial component", "femoral component"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -43,7 +43,7 @@ DIAGNOSIS_OVERRIDES = [
     },
     {
         "diagnosis_keyword": "hip replacement",
-        "item_category": "ORTHOPEDIC_IMPLANT",
+        "item_category": "IMPLANT",
         "item_keywords": ["implant", "hip implant", "prosthesis", "hip prosthesis", "acetabular cup", "femoral stem"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -54,7 +54,7 @@ DIAGNOSIS_OVERRIDES = [
     # ── Cardiac ───────────────────────────────────────────────────────────────
     {
         "diagnosis_keyword": "cardiac",
-        "item_category": "CARDIAC_IMPLANT",
+        "item_category": "IMPLANT",
         "item_keywords": ["stent", "coronary stent", "drug eluting stent", "bare metal stent", "cardiac stent"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -66,7 +66,7 @@ DIAGNOSIS_OVERRIDES = [
     },
     {
         "diagnosis_keyword": "bypass",
-        "item_category": "CARDIAC_IMPLANT",
+        "item_category": "IMPLANT",
         "item_keywords": ["stent", "coronary stent", "graft", "bypass graft"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -77,7 +77,7 @@ DIAGNOSIS_OVERRIDES = [
     # ── Accident / Emergency ─────────────────────────────────────────────────
     {
         "diagnosis_keyword": "accident",
-        "item_category": "EMERGENCY_CONSUMABLE",
+        "item_category": "CONSUMABLE",
         "item_keywords": ["suture", "sutures", "wound care", "wound dressing", "emergency dressing"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -89,7 +89,7 @@ DIAGNOSIS_OVERRIDES = [
     },
     {
         "diagnosis_keyword": "trauma",
-        "item_category": "EMERGENCY_CONSUMABLE",
+        "item_category": "CONSUMABLE",
         "item_keywords": ["suture", "sutures", "wound care", "wound dressing", "emergency consumable"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -100,7 +100,7 @@ DIAGNOSIS_OVERRIDES = [
     # ── Dialysis ──────────────────────────────────────────────────────────────
     {
         "diagnosis_keyword": "dialysis",
-        "item_category": "DIALYSIS_CONSUMABLE",
+        "item_category": "CONSUMABLE",
         "item_keywords": ["dialysis consumable", "dialyzer", "tubing", "bicarbonate", "heparin"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,
@@ -114,7 +114,7 @@ DIAGNOSIS_OVERRIDES = [
     # ── Chemotherapy ─────────────────────────────────────────────────────────
     {
         "diagnosis_keyword": "chemotherapy",
-        "item_category": "CHEMO_CONSUMABLE",
+        "item_category": "CONSUMABLE",
         "item_keywords": ["chemotherapy consumable", "chemo consumable", "iv set", "infusion set", "chemo kit"],
         "override_status": "PAYABLE",
         "payable_pct": 100.0,

@@ -15,7 +15,7 @@ All downstream steps fall back to their existing keyword logic gracefully.
 import json
 import logging
 
-from app.schemas import BillItemInput
+from app.schemas import BillItemInput, ItemCategory
 from app.services.gpt_service import gpt_client, settings as gpt_settings
 
 logger = logging.getLogger(__name__)
@@ -24,21 +24,7 @@ logger = logging.getLogger(__name__)
 # These must stay in sync with the SYSTEM_PROMPT below and with the categories
 # used by step1_universal.py / insurer_rules / diagnosis_overrides in the DB.
 
-VALID_CATEGORIES = {
-    "CONSUMABLE",           # Gloves, syringes, IV cannula, dressings, drapes, OT kits
-    "DIAGNOSTIC_TEST",      # CBC, LFT, RFT, CT scan, MRI, X-ray, biopsy, culture & sensitivity
-    "DRUG",                 # Medicines, tablets, capsules, IV fluids, antibiotics, injections
-    "IMPLANT",              # Stent, knee prosthesis, IOL, pacemaker, hip implant
-    "PROCEDURE",            # Surgery, OT charges, anaesthesia, doctor fees, consultation
-    "ROOM_RENT",            # Room charge, bed charge, ICU charges, NICU
-    "ADMIN",                # Registration fee, discharge fee, documentation, file charges
-    "NON_MEDICAL",          # Food, telephone, TV, laundry, toiletries
-    "ATTENDANT",            # Attendant charge, bystander, ayah
-    "EQUIPMENT_RENTAL",     # Nebulizer hire, CPAP rental, monitor rental
-    "EXTERNAL_PHARMACY",    # Outside pharmacy bill, retail pharmacy invoice
-    "COSMETIC",             # Botox, liposuction, rhinoplasty, aesthetic procedures
-    "UNCLASSIFIED",         # Fallback when GPT is genuinely uncertain
-}
+VALID_CATEGORIES = {cat.value for cat in ItemCategory}
 
 SYSTEM_PROMPT = """You are a medical billing classification expert specializing in Indian hospital bills.
 

@@ -71,7 +71,7 @@ def check_diagnosis_override(
                     billed_amount=item.billed_amount,
                     payable_amount=round(payable, 2),
                     status=PayabilityStatus(override.override_status),
-                    category="DIAGNOSIS_OVERRIDE",
+                    category=item_category or override.item_category,
                     rule_matched=f"DIAGNOSIS:{override.diagnosis_keyword}:{kw}",
                     confidence=0.90,
                     confidence_basis=ConfidenceBasis.DIAGNOSIS_OVERRIDE,

@@ -42,6 +42,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
   // Safe cast since we know they are Decimal
   const totalBilled = Number(analysis.total_billed) || 0;
   const totalPayable = Number(analysis.total_payable) || 0;
+  const totalPendingVerification = Number(analysis.total_pending_verification) || 0;
   const totalAtRisk = Number(analysis.total_at_risk) || 0;
   const rejectionPct = Number(analysis.rejection_rate_pct) || 0;
 
@@ -77,7 +78,8 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
         {/* Summary Metrics */}
         <SummaryCards 
           totalBilled={totalBilled} 
-          totalPayable={totalPayable} 
+          totalPayable={totalPayable}
+          totalPendingVerification={totalPendingVerification}
           totalAtRisk={totalAtRisk} 
           rejectionPct={rejectionPct} 
         />

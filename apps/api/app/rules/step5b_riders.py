@@ -10,8 +10,22 @@ import uuid
 
 # Categories that can be rescued
 CONSUMABLE_CATEGORIES = ["CONSUMABLE", "CONSUMABLE_OVERRIDE", "CONSUMABLE_SUBLIMIT"]
-OPD_CATEGORIES = ["OPD", "CONSULTATION", "EXTERNAL_PHARMACY"]
+# EXTERNAL_PHARMACY is intentionally excluded from OPD_CATEGORIES:
+# an OPD rider covers outpatient consultations and tests, but rescuing external
+# pharmacy invoices requires explicit policy wording — it is not a safe default.
+OPD_CATEGORIES = ["OPD", "CONSULTATION"]
 MATERNITY_CATEGORIES = ["MATERNITY", "DELIVERY"]
+
+# Extended obstetric keyword list covering real-world Indian hospital billing descriptors
+MATERNITY_KEYWORDS = [
+    "maternity", "delivery", "c-section", "caesarean", "lscs",
+    "obstetric", "obstetrics", "antenatal", "ante natal",
+    "postnatal", "post natal", "prenatal", "pre natal",
+    "episiotomy", "neonatal", "newborn care", "new born care",
+    "vacuum delivery", "forceps delivery",
+    "labour charge", "labor charge", "labour room", "labor room",
+    "normal delivery", "assisted delivery",
+]
 
 def _mark_payable(item: BillItemInput, current_result: AnalyzedLineItem | None, reason: str, confidence_basis: ConfidenceBasis) -> AnalyzedLineItem:
     if current_result is None:
@@ -51,6 +65,17 @@ def check_rider_and_plan_coverage(
 
     category = item_category or (current_result.category if current_result else None)
 
+    # If the prior step determined a partial amount through an explicit insurer rule
+    # (e.g. insurer pays 50% of this category by contract), a rider should NOT flip it
+    # to fully PAYABLE. Riders extend coverage for excluded items, not for items where
+    # the insurer has already made a deliberate partial determination.
+    if (
+        current_result is not None
+        and current_result.status == PayabilityStatus.PARTIALLY_PAYABLE
+        and current_result.confidence_basis == ConfidenceBasis.INSURER_RULE
+    ):
+        return current_result
+
     # Derive flags from the authoritative category (Step 0) first;
     # keyword heuristics are only the last-resort fallback for UNCLASSIFIED items.
     desc_lower = item.description.lower()
@@ -59,10 +84,10 @@ def check_rider_and_plan_coverage(
         is_opd = category in OPD_CATEGORIES
         is_maternity = category in MATERNITY_CATEGORIES
     else:
-        # Keyword fallback (same as before) for truly unclassified items
-        is_consumable = category in CONSUMABLE_CATEGORIES or any(k in desc_lower for k in ["gloves", "syringe", "mask", "disposable", "consumable"])
-        is_opd = category in OPD_CATEGORIES or any(k in desc_lower for k in ["opd", "outpatient", "consultation"])
-        is_maternity = category in MATERNITY_CATEGORIES or any(k in desc_lower for k in ["maternity", "delivery", "c-section", "caesarean"])
+        # Keyword fallback for truly unclassified items
+        is_consumable = any(k in desc_lower for k in ["gloves", "syringe", "mask", "disposable", "consumable"])
+        is_opd = any(k in desc_lower for k in ["opd", "outpatient", "consultation"])
+        is_maternity = any(k in desc_lower for k in MATERNITY_KEYWORDS)
 
     # 1. Check Consumables
     if is_consumable and current_result and current_result.status != PayabilityStatus.PAYABLE:
@@ -78,7 +103,7 @@ def check_rider_and_plan_coverage(
             if rider.covers_opd:
                 return _mark_payable(item, current_result, f"Rider '{rider.name}' covers OPD", ConfidenceBasis.INSURER_RULE)
 
-    # 3. Check Maternity
+    # 3. Check Maternity — uses expanded keyword list to cover real-world obstetric billing
     if is_maternity and current_result and current_result.status != PayabilityStatus.PAYABLE:
         for rider in riders:
             if rider.covers_maternity:

@@ -71,6 +71,19 @@ export interface PlanDetail {
   riders: RiderDetail[];
 }
 
+export interface AnalysisSummary {
+  total_billed: number;
+  total_payable: number;
+  total_pending_verification: number;
+  total_at_risk: number;
+  rejection_rate_pct: number;
+  items_count: number;
+  not_payable_count: number;
+  partial_count: number;
+  verify_count: number;
+  top_rejection_categories: string[];
+}
+
 export interface InsurerResponse {
   id: string;
   code: string;
