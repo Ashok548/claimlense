@@ -19,28 +19,40 @@ async def load_universal_exclusion_rules(db: AsyncSession) -> list:
     return result.scalars().all()
 
 
-# Categories that are never excluded by IRDAI universal rules — they are payable
-# medical services/items regardless of how they appear in a description.
+# Compile-time fallback for when item_categories table is empty (pre-011 migration).
 _NEVER_EXCLUDED_CATEGORIES = {"DIAGNOSTIC_TEST", "IMPLANT", "PROCEDURE", "ROOM_RENT", "DRUG"}
+
+
+def _is_never_excluded(category: str, item_categories: dict) -> bool:
+    """Return True if this category should never be rejected by IRDAI rules.
+
+    Uses the DB-loaded item_categories dict when available; falls back to the
+    hardcoded _NEVER_EXCLUDED_CATEGORIES set for backward compatibility.
+    """
+    if item_categories:
+        cat_row = item_categories.get(category)
+        return bool(cat_row and cat_row.never_excluded)
+    return category in _NEVER_EXCLUDED_CATEGORIES
 
 
 def check_universal_exclusions(
     item: BillItemInput,
     rules: list,
     item_category: str | None = None,
+    item_categories: dict | None = None,
 ) -> AnalyzedLineItem | None:
     """
     Returns an AnalyzedLineItem if item matches an IRDAI universal exclusion.
     Returns None if no match — proceed to next step.
 
-    item_category: pre-assigned category from Step 0 LLM batch classifier.
-      - If the category is in _NEVER_EXCLUDED_CATEGORIES, skip all exclusion rules
-        immediately (prevents false positives like 'blood tube' hitting CONSUMABLE).
-      - If category matches a rule's category → high-confidence match without keyword.
-      - If item_category is None or UNCLASSIFIED → fall back to keyword matching.
+    item_category:   pre-assigned category from Step 0 LLM batch classifier.
+    item_categories: dict {code -> ItemCategoryModel} loaded by the engine.
+                     When provided, never_excluded flags and recovery_template text
+                     come from the DB instead of hardcoded constants.
     """
+    item_categories = item_categories or {}
     # Fast-exit: LLM confirmed this is a test/procedure/implant — never excluded
-    if item_category and item_category in _NEVER_EXCLUDED_CATEGORIES:
+    if item_category and _is_never_excluded(item_category, item_categories):
         return None
 
     desc_lower = item.description.lower()
@@ -59,7 +71,7 @@ def check_universal_exclusions(
                 confidence=0.97,  # Slightly higher — LLM + rule agree
                 confidence_basis=ConfidenceBasis.IRDAI_RULE,
                 rejection_reason=rule.rejection_reason,
-                recovery_action=_recovery_action(rule.category),
+                recovery_action=_recovery_action(rule.category, item_categories),
                 llm_used=False,
             )
 
@@ -78,14 +90,23 @@ def check_universal_exclusions(
                         confidence=0.95,
                         confidence_basis=ConfidenceBasis.IRDAI_RULE,
                         rejection_reason=rule.rejection_reason,
-                        recovery_action=_recovery_action(rule.category),
+                        recovery_action=_recovery_action(rule.category, item_categories),
                         llm_used=False,
                     )
 
     return None
 
 
-def _recovery_action(category: str) -> str:
+def _recovery_action(category: str, item_categories: dict | None = None) -> str:
+    """Return recovery action text for a rejected category.
+
+    Uses DB row's recovery_template when available; falls back to hardcoded text.
+    """
+    if item_categories:
+        cat_row = item_categories.get(category)
+        if cat_row and cat_row.recovery_template:
+            return cat_row.recovery_template
+
     actions = {
         "CONSUMABLE": (
             "Ask the hospital billing desk to bundle consumable costs into the "

@@ -4,6 +4,9 @@ import json
 
 from fastapi import APIRouter, HTTPException
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.schemas import ParseRequest, ParseResponse, ParsedItem
 from app.services.ocr_service import extract_text
@@ -228,6 +231,20 @@ async def parse_bill(request: ParseRequest) -> ParseResponse:
         general_ward_days = _safe_int(data.get("general_ward_days"))
         total_days = _safe_int(data.get("total_days"))
 
+        extracted_total_raw = data.get("total")
+        extracted_total: float | None = float(extracted_total_raw) if extracted_total_raw is not None else None
+        
+        calculated_total = sum(item.billed_amount for item in items)
+        
+        # Tolerance for small rounds (e.g. 2.0)
+        total_mismatch = False
+        if extracted_total is not None and abs(extracted_total - calculated_total) > 2.0:
+            total_mismatch = True
+            logger.warning(
+                "parse: Total mismatch detected. Extracted total: %s, Calculated total: %s",
+                extracted_total, calculated_total
+            )
+
         # Derive total_days from parts if GPT didn't provide it
         if total_days is None and (icu_days or general_ward_days):
             total_days = (icu_days or 0) + (general_ward_days or 0) or None
@@ -242,6 +259,9 @@ async def parse_bill(request: ParseRequest) -> ParseResponse:
         job_id=request.job_id,
         items=items,
         raw_item_count=len(items),
+        extracted_total=extracted_total,
+        calculated_total=round(calculated_total, 2),
+        total_mismatch=total_mismatch,
         parse_method=f"{ocr_method}+gpt4o",
         admission_date=admission_date,
         discharge_date=discharge_date,

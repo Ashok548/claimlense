@@ -4,9 +4,13 @@ Used by FastAPI to download uploaded bills from R2 for OCR processing.
 """
 
 import io
+import logging
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
+
+logger = logging.getLogger(__name__)
 
 from app.config import settings
 
@@ -55,3 +59,22 @@ def generate_presigned_url(s3_key: str, expires_in: int = 3600) -> str:
         ExpiresIn=expires_in,
     )
     return url
+
+
+def object_exists(s3_key: str) -> bool:
+    """Return True if *s3_key* already exists in R2, False otherwise.
+
+    Uses HeadObject which is cheap (no body transfer).  A missing object
+    raises a ClientError with code '404' or 'NoSuchKey'; any other error
+    is re-raised so callers can decide whether to fail or regenerate.
+    """
+    client = get_r2_client()
+    try:
+        client.head_object(Bucket=settings.r2_bucket_name, Key=s3_key)
+        return True
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code", "")
+        if code in ("404", "NoSuchKey"):
+            return False
+        logger.warning("s3_service.object_exists: unexpected error for key %r: %s", s3_key, exc)
+        raise

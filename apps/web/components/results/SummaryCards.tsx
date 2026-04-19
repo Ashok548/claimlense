@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ReceiptCent, ShieldAlert, BadgeCheck, Activity } from "lucide-react";
 import { motion } from "framer-motion";
+import { formatCurrency } from "@/lib/utils";
 
 interface Props {
   totalBilled: number;
@@ -16,28 +17,28 @@ export function SummaryCards({ totalBilled, totalPayable, totalPendingVerificati
   const cards = [
     {
       title: "Total Billed",
-      value: `₹${totalBilled.toLocaleString()}`,
+      value: `₹${formatCurrency(totalBilled)}`,
       icon: ReceiptCent,
       color: "text-slate-400",
       bg: "bg-slate-800/50",
     },
     {
       title: "Confirmed Payable",
-      value: `₹${totalPayable.toLocaleString()}`,
+      value: `₹${formatCurrency(totalPayable)}`,
       icon: BadgeCheck,
       color: "text-green-400",
       bg: "bg-green-500/10 border-green-500/20",
     },
     {
       title: "Pending Verification",
-      value: `₹${totalPendingVerification.toLocaleString()}`,
+      value: `₹${formatCurrency(totalPendingVerification)}`,
       icon: Activity,
       color: "text-yellow-400",
       bg: "bg-yellow-500/10 border-yellow-500/20",
     },
     {
       title: "At Risk Amount",
-      value: `₹${totalAtRisk.toLocaleString()}`,
+      value: `₹${formatCurrency(totalAtRisk)}`,
       icon: ShieldAlert,
       color: "text-red-400",
       bg: "bg-red-500/10 border-red-500/20",

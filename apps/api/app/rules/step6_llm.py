@@ -17,9 +17,8 @@ You must return ONLY valid JSON. No explanation outside the JSON object.
 
 JSON schema:
 {
-  "status": "PAYABLE" | "NOT_PAYABLE" | "PARTIALLY_PAYABLE" | "VERIFY_WITH_TPA",
+    "status": "PAYABLE" | "NOT_PAYABLE" | "VERIFY_WITH_TPA",
   "confidence": 0.0 to 1.0,
-  "payable_pct": number (0-100, only required when status is PARTIALLY_PAYABLE, e.g. 50),
   "category": "short category name",
   "reason": "concise explanation citing IRDAI rule or insurer pattern if applicable",
   "recovery_action": "what the patient can do to maximize payability"
@@ -84,15 +83,12 @@ async def llm_classify_item(
 
         status = PayabilityStatus(data.get("status", "VERIFY_WITH_TPA"))
         confidence = float(data.get("confidence", 0.72))
-        payable_pct = data.get("payable_pct")
-
-        # If LLM declares PARTIALLY_PAYABLE but omits the percentage, we cannot
-        # compute a reliable payable amount. Downgrade to VERIFY_WITH_TPA so the
-        # item does not inflate the payable total with an unverified full-billed figure.
-        if status == PayabilityStatus.PARTIALLY_PAYABLE and payable_pct is None:
+        # LLM must not drive partial payouts. If the model still emits
+        # PARTIALLY_PAYABLE, downgrade to VERIFY_WITH_TPA.
+        if status == PayabilityStatus.PARTIALLY_PAYABLE:
             status = PayabilityStatus.VERIFY_WITH_TPA
 
-        payable = _compute_payable(item.billed_amount, status, payable_pct)
+        payable = _compute_payable(item.billed_amount, status)
 
         return AnalyzedLineItem(
             id=uuid.uuid4(),
@@ -104,6 +100,13 @@ async def llm_classify_item(
             rule_matched="LLM:GPT4O",
             confidence=min(confidence, 0.80),  # Cap LLM confidence at 80%
             confidence_basis=ConfidenceBasis.LLM_REASONING,
+            decision_source="LLM_FALLBACK",
+            policy_basis_id="LLM_NON_DETERMINISTIC",
+            policy_basis_text=(
+                "No deterministic policy rule matched. LLM output is advisory only; "
+                "partial payouts are blocked and unresolved cases are marked VERIFY_WITH_TPA."
+            ),
+            payable_pct_source=None,
             rejection_reason=data.get("reason") if status != PayabilityStatus.PAYABLE else None,
             recovery_action=data.get("recovery_action"),
             llm_used=True,
@@ -114,14 +117,12 @@ async def llm_classify_item(
         return _default_verify(item)
 
 
-def _compute_payable(billed: float, status: PayabilityStatus, payable_pct: float | None) -> float:
+def _compute_payable(billed: float, status: PayabilityStatus) -> float:
     if status == PayabilityStatus.PAYABLE:
         return billed
     if status == PayabilityStatus.NOT_PAYABLE:
         return 0.0
-    if status == PayabilityStatus.PARTIALLY_PAYABLE and payable_pct is not None:
-        return round(billed * (float(payable_pct) / 100), 2)
-    # VERIFY_WITH_TPA (or PARTIALLY_PAYABLE already downgraded before this call)
+    # VERIFY_WITH_TPA
     # — show full billed as the at-risk figure visible to the user.
     return billed
 
@@ -138,6 +139,10 @@ def _default_verify(item: BillItemInput) -> AnalyzedLineItem:
         rule_matched="DEFAULT:VERIFY",
         confidence=0.55,
         confidence_basis=ConfidenceBasis.UNCLASSIFIED,
+        decision_source="DEFAULT_FALLBACK",
+        policy_basis_id="DEFAULT_VERIFY",
+        policy_basis_text="LLM unavailable or failed; deterministic fallback marks item VERIFY_WITH_TPA.",
+        payable_pct_source=None,
         rejection_reason=None,
         recovery_action=(
             "This item could not be automatically classified. "

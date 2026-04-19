@@ -21,6 +21,12 @@ class PayabilityStatus(str, Enum):
     VERIFY_WITH_TPA = "VERIFY_WITH_TPA"
 
 
+# DEPRECATED — do NOT add new categories here.
+# The canonical taxonomy lives in the `item_categories` DB table (migration 011).
+# This enum is kept only as a compile-time constant for IDE autocomplete and the
+# pre-migration fallback in step0_categorize.VALID_CATEGORIES.
+# The rule engine uses `str` for all category fields so adding a DB row is
+# sufficient to enable a new category — no Python change required.
 class ItemCategory(str, Enum):
     CONSUMABLE = "CONSUMABLE"
     DIAGNOSTIC_TEST = "DIAGNOSTIC_TEST"
@@ -62,6 +68,7 @@ class ConfidenceBasis(str, Enum):
     CALCULATION = "CALCULATION"
     LLM_REASONING = "LLM_REASONING"
     UNCLASSIFIED = "UNCLASSIFIED"
+    ITEM_CATEGORY_DEFAULT = "ITEM_CATEGORY_DEFAULT"
 
 
 # ─── Request Schemas ──────────────────────────────────────────────────────────
@@ -111,6 +118,10 @@ class AnalyzedLineItem(BaseModel):
     rule_matched: str | None
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_basis: ConfidenceBasis
+    decision_source: str | None = None
+    policy_basis_id: str | None = None
+    policy_basis_text: str | None = None
+    payable_pct_source: str | None = None
     rejection_reason: str | None
     recovery_action: str | None
     llm_used: bool = False
@@ -155,6 +166,9 @@ class ParseResponse(BaseModel):
     job_id: uuid.UUID
     items: list[ParsedItem]
     raw_item_count: int
+    extracted_total: float | None = None
+    calculated_total: float = 0.0
+    total_mismatch: bool = False
     parse_method: str  # "pdfplumber", "pytesseract", "gpt4o"
     # Hospital stay duration extracted from the bill
     admission_date: str | None = None
@@ -169,6 +183,11 @@ class RiderDetail(BaseModel):
     code: str
     name: str
     description: str | None = None
+    # Generic coverage list — canonical item_category codes this rider covers.
+    # Derived from rider_coverage_clauses.target_categories (flattened, deduplicated).
+    coverage_types: list[str] = Field(default_factory=list)
+    # Deprecated boolean fields kept for backward compatibility.
+    # Computed from coverage_types — do not set them directly.
     covers_consumables: bool = False
     covers_opd: bool = False
     covers_maternity: bool = False

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { CopyX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { DownloadReportButton } from "@/components/results/DownloadReportButton";
+import { formatCurrency } from "@/lib/utils";
 
 type ReportHistoryItem = {
   id: string;
@@ -67,10 +68,10 @@ export function ReportHistoryTable({ reports }: Props) {
                 {r.diagnosis || "N/A"}
               </td>
               <td className="px-6 py-4 text-right text-slate-300">
-                ₹{r.totalBilled.toLocaleString()}
+                ₹{formatCurrency(r.totalBilled)}
               </td>
               <td className="px-6 py-4 text-right text-red-400 font-medium">
-                ₹{r.totalAtRisk.toLocaleString()}
+                ₹{formatCurrency(r.totalAtRisk)}
               </td>
               <td className="px-6 py-4">
                 <div className="flex justify-center scale-90">

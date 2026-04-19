@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ShieldCheck, Coins, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/navigation/BackButton";
@@ -69,9 +70,11 @@ export default async function DashboardPage() {
             </div>
 
             {!hasCredits ? (
-              <Button className="bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20 px-6">
-                <Crown className="w-5 h-5 mr-2" />
-                Upgrade Plan
+              <Button asChild className="bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20 px-6">
+                <Link href="/pricing">
+                  <Crown className="w-5 h-5 mr-2" />
+                  Upgrade Plan
+                </Link>
               </Button>
             ) : null}
           </div>
@@ -84,7 +87,10 @@ export default async function DashboardPage() {
             <div>
               <h4 className="font-bold">You&apos;re out of credits!</h4>
               <p className="text-sm opacity-80 mt-1">
-                Upgrade your plan now to unlock more AI analyses, full PDF reports, and premium TPA dispute letters.
+                Upgrade your plan now to unlock more AI analyses, full PDF reports, and premium TPA dispute letters.{" "}
+                <Link href="/pricing" className="underline underline-offset-2 font-semibold hover:text-amber-100">
+                  View plans →
+                </Link>
               </p>
             </div>
           </div>

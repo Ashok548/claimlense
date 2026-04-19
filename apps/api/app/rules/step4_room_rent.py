@@ -15,8 +15,13 @@ This step:
 
 import uuid
 
+from sqlalchemy import or_, select
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.schemas import AnalyzedLineItem, BillItemInput, ConfidenceBasis, PayabilityStatus
 
+# Compile-time fallback keyword lists used when room_rent_config table is empty.
 ROOM_RENT_KEYWORDS = [
     "room rent", "room charge", "bed charge", "ward charge",
     "accommodation", "room & board", "room and board",
@@ -28,15 +33,85 @@ ROOM_RENT_KEYWORDS = [
 ICU_KEYWORDS = {"icu", "iccu", "hdu", "nicu", "picu"}
 
 
-def is_room_rent_item(description: str) -> bool:
+async def load_room_rent_config(
+    db: AsyncSession,
+    insurer_id=None,
+    plan_code: str | None = None,
+):
+    """Load the most-specific RoomRentConfig row for this insurer/plan.
+
+    Priority order:
+      1. Insurer + plan_code match
+      2. Insurer match (no plan filter)
+      3. Global default (insurer_id=NULL)
+
+    Returns None if the table does not exist (pre-012 migration).
+    """
+    try:
+        from app.models import RoomRentConfig
+        stmt = (
+            select(RoomRentConfig)
+            .options(
+                selectinload(RoomRentConfig.detection_keyword_set),
+                selectinload(RoomRentConfig.icu_keyword_set),
+            )
+            .where(
+                or_(
+                    RoomRentConfig.insurer_id.is_(None),
+                    RoomRentConfig.insurer_id == insurer_id,
+                )
+            )
+            .order_by(RoomRentConfig.priority.desc())
+        )
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+        if not rows:
+            return None
+
+        # Pick the most-specific match when plan_code is provided
+        if plan_code:
+            plan_match = next(
+                (r for r in rows if r.plan_codes and plan_code in r.plan_codes),
+                None,
+            )
+            if plan_match:
+                return plan_match
+
+        # Insurer-level match (no plan filter)
+        if insurer_id:
+            insurer_match = next(
+                (r for r in rows if r.insurer_id == insurer_id and not r.plan_codes),
+                None,
+            )
+            if insurer_match:
+                return insurer_match
+
+        # Fall back to global default
+        return next((r for r in rows if r.insurer_id is None), None)
+    except Exception:
+        return None
+
+
+def is_room_rent_item(description: str, room_rent_cfg=None) -> bool:
     desc_lower = description.lower()
-    return any(kw in desc_lower for kw in ROOM_RENT_KEYWORDS)
+    keywords = (
+        room_rent_cfg.detection_keyword_set.keywords
+        if room_rent_cfg and room_rent_cfg.detection_keyword_set
+        else ROOM_RENT_KEYWORDS
+    )
+    return any(kw in desc_lower for kw in keywords)
 
 
-def is_icu_item(description: str) -> bool:
+def is_icu_item(description: str, room_rent_cfg=None) -> bool:
     """True if the room rent item is an ICU/ICCU/HDU/NICU/PICU charge."""
     desc_lower = description.lower()
-    return any(kw in desc_lower for kw in ICU_KEYWORDS)
+    keywords = (
+        room_rent_cfg.icu_keyword_set.keywords
+        if room_rent_cfg and room_rent_cfg.icu_keyword_set
+        else ICU_KEYWORDS
+    )
+    return any(kw in desc_lower for kw in keywords)
 
 
 def check_room_rent(
@@ -45,23 +120,21 @@ def check_room_rent(
     icu_days: int | None = None,
     general_ward_days: int | None = None,
     icu_room_rent_limit: float | None = None,
-) -> tuple[AnalyzedLineItem | None, float, bool]:
+    room_rent_cfg=None,
+) -> tuple["AnalyzedLineItem | None", float, bool]:
     """
     Returns:
         (AnalyzedLineItem, deduction_ratio, is_icu_line) — if this is a room rent item
         (None, 1.0, False) — if not a room rent item
 
-    deduction_ratio: used by engine.py to proportionally reduce other items.
-    is_icu_line: True when this item is an ICU charge, so engine.py can track
-                 separate ICU vs ward deduction ratios.
-
-    ICU items: use icu_room_rent_limit when set, else fall back to room_rent_limit.
-    Ward items: always use room_rent_limit.
+    room_rent_cfg: RoomRentConfig ORM row loaded by the engine.
+      When provided, keyword detection uses the DB-stored keyword sets.
+      When None, falls back to hardcoded ROOM_RENT_KEYWORDS / ICU_KEYWORDS.
     """
-    if not is_room_rent_item(item.description):
+    if not is_room_rent_item(item.description, room_rent_cfg):
         return None, 1.0, False
 
-    icu_item = is_icu_item(item.description)
+    icu_item = is_icu_item(item.description, room_rent_cfg)
 
     # Resolve the effective per-day cap for this line item type
     effective_limit: float | None

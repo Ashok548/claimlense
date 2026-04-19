@@ -11,7 +11,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-from app.services.s3_service import upload_file, generate_presigned_url
+from app.services.s3_service import upload_file, generate_presigned_url, object_exists
 
 def generate_analysis_pdf(analysis_data: dict, line_items: list[dict]) -> bytes:
     buffer = io.BytesIO()
@@ -97,22 +97,26 @@ def generate_analysis_pdf(analysis_data: dict, line_items: list[dict]) -> bytes:
 
 async def get_or_generate_report(analysis_id: uuid.UUID, db_session) -> str:
     """
-    Generates a PDF from the analysis_id, uploads to R2, and returns a presigned URL.
-    Implements idempotency checking.
+    Return a fresh presigned URL for the PDF report of *analysis_id*.
+
+    Idempotent: the PDF is generated and uploaded to R2 only on the first
+    call.  Subsequent calls skip regeneration and re-sign the existing
+    object — saving compute, R2 write costs, and ensuring the PDF snapshot
+    never changes for a given analysis.  The presigned URL is always
+    regenerated because it carries a time-limited TTL.
     """
     # Import locally to avoid circular dependencies
     from sqlalchemy import text
-    
-    # Check if report already exists via R2 key (Idempotency fix gap 5)
-    # Since we didn't add report_r2_key to claim_analyses, we'll store it in a dummy dict 
-    # OR we use S3 predictably formatting the key
-    
+
     s3_key = f"reports/{analysis_id}_report.pdf"
-    
-    # Always generate new in this example, or catch s3 HeadObject?
-    # For now, generate the PDF:
-    
-    # 1. Fetch from DB
+
+    # --- Idempotency check: skip generation if the PDF already exists in R2 ---
+    import asyncio
+    already_exists = await asyncio.to_thread(object_exists, s3_key)
+    if already_exists:
+        return await asyncio.to_thread(generate_presigned_url, s3_key, 3600)
+
+    # 1. Fetch analysis from DB
     result = await db_session.execute(
         text("SELECT * FROM claim_analyses WHERE id = :id"),
         {"id": str(analysis_id)}
@@ -120,9 +124,9 @@ async def get_or_generate_report(analysis_id: uuid.UUID, db_session) -> str:
     analysis = result.fetchone()
     if not analysis:
         raise ValueError("Analysis not found")
-        
+
     analysis_dict = dict(analysis._mapping)
-    
+
     # Fetch Insurer Name
     insurer_result = await db_session.execute(
         text("SELECT name FROM insurers WHERE id = :id"),
@@ -138,15 +142,12 @@ async def get_or_generate_report(analysis_id: uuid.UUID, db_session) -> str:
         {"id": str(analysis_id)}
     )
     items = [dict(row._mapping) for row in items_result.fetchall()]
-    
+
     # 2. Build PDF
     pdf_bytes = generate_analysis_pdf(analysis_dict, items)
-    
+
     # 3. Upload to R2
-    import asyncio
     await asyncio.to_thread(upload_file, s3_key, pdf_bytes, "application/pdf")
-    
-    # 4. Get URL
-    url = await asyncio.to_thread(generate_presigned_url, s3_key, 3600)
-    
-    return url
+
+    # 4. Return presigned URL
+    return await asyncio.to_thread(generate_presigned_url, s3_key, 3600)

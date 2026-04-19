@@ -6,17 +6,48 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Insurer, Plan
-from app.schemas import InsurerResponse, PlanDetail
+from app.models import Insurer, Plan, Rider
+from app.schemas import InsurerResponse, PlanDetail, RiderDetail
 
 router = APIRouter(prefix="/v1/insurers", tags=["insurers"])
+
+
+def _build_rider_detail(r: Rider) -> RiderDetail:
+    """Build RiderDetail from an ORM Rider, deriving coverage_types and
+    backward-compatible boolean fields from rider_coverage_clauses."""
+    coverage_types: list[str] = []
+    if hasattr(r, "coverage_clauses") and r.coverage_clauses:
+        seen: set[str] = set()
+        for clause in r.coverage_clauses:
+            for cat in clause.target_categories:
+                if cat not in seen:
+                    seen.add(cat)
+                    coverage_types.append(cat)
+
+    return RiderDetail(
+        id=r.id,
+        code=r.code,
+        name=r.name,
+        description=r.description,
+        coverage_types=coverage_types,
+        covers_consumables="CONSUMABLE" in coverage_types or r.covers_consumables,
+        covers_opd="OPD" in coverage_types or r.covers_opd,
+        covers_maternity="MATERNITY" in coverage_types or r.covers_maternity,
+        covers_dental="DENTAL" in coverage_types or r.covers_dental,
+        covers_critical_illness="CRITICAL_ILLNESS" in coverage_types or r.covers_critical_illness,
+        additional_sum_insured=float(r.additional_sum_insured) if r.additional_sum_insured else None,
+    )
 
 
 @router.get("/", response_model=list[InsurerResponse])
 async def list_insurers(db: AsyncSession = Depends(get_db)) -> list[InsurerResponse]:
     result = await db.execute(
         select(Insurer)
-        .options(selectinload(Insurer.plans_rel).selectinload(Plan.riders))
+        .options(
+            selectinload(Insurer.plans_rel)
+            .selectinload(Plan.riders)
+            .selectinload(Rider.coverage_clauses)
+        )
         .where(Insurer.is_active == True)
     )  # noqa: E712
     insurers = result.scalars().all()
@@ -39,13 +70,7 @@ async def list_insurers(db: AsyncSession = Depends(get_db)) -> list[InsurerRespo
                     icu_limit_pct=float(p.icu_limit_pct) if p.icu_limit_pct else None,
                     consumables_covered=p.consumables_covered,
                     consumables_sublimit=float(p.consumables_sublimit) if p.consumables_sublimit else None,
-                    riders=[{
-                        "id": r.id, "code": r.code, "name": r.name, "description": r.description,
-                        "covers_consumables": r.covers_consumables, "covers_opd": r.covers_opd,
-                        "covers_maternity": r.covers_maternity, "covers_dental": r.covers_dental,
-                        "covers_critical_illness": r.covers_critical_illness,
-                        "additional_sum_insured": float(r.additional_sum_insured) if r.additional_sum_insured else None
-                    } for r in p.riders]
+                    riders=[_build_rider_detail(r) for r in p.riders],
                 ) for p in i.plans_rel
             ] if i.plans_rel else None,
             room_rent_default=i.room_rent_default,
@@ -63,7 +88,7 @@ async def get_insurer_plans(insurer_id: str, db: AsyncSession = Depends(get_db))
 
     result = await db.execute(
         select(Plan)
-        .options(selectinload(Plan.riders))
+        .options(selectinload(Plan.riders).selectinload(Rider.coverage_clauses))
         .where((Plan.insurer_id == insurer.id) & (Plan.is_active == True))
     )
     plans = result.scalars().all()
@@ -80,12 +105,6 @@ async def get_insurer_plans(insurer_id: str, db: AsyncSession = Depends(get_db))
             icu_limit_pct=float(p.icu_limit_pct) if p.icu_limit_pct else None,
             consumables_covered=p.consumables_covered,
             consumables_sublimit=float(p.consumables_sublimit) if p.consumables_sublimit else None,
-            riders=[{
-                "id": r.id, "code": r.code, "name": r.name, "description": r.description,
-                "covers_consumables": r.covers_consumables, "covers_opd": r.covers_opd,
-                "covers_maternity": r.covers_maternity, "covers_dental": r.covers_dental,
-                "covers_critical_illness": r.covers_critical_illness,
-                "additional_sum_insured": float(r.additional_sum_insured) if r.additional_sum_insured else None
-            } for r in p.riders]
+            riders=[_build_rider_detail(r) for r in p.riders],
         ) for p in plans
     ]

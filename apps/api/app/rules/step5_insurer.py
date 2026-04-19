@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import InsurerRule
 from app.schemas import AnalyzedLineItem, BillItemInput, ConfidenceBasis, PayabilityStatus
+from app.rules._shared import contains_phrase, is_unclassified, normalize_text
 
 
 async def load_insurer_rules(insurer_id: uuid.UUID, db: AsyncSession) -> list:
@@ -32,20 +33,25 @@ def check_insurer_rules(
     Returns None if no match.
 
     item_category: pre-assigned category from Step 0.
-      - If category matches rule.item_category → match without keyword loop.
-      - Keyword loop is fallback for UNCLASSIFIED or missing category.
+      - If category is known (non-UNCLASSIFIED, non-None) and matches
+        rule.item_category → direct match, no keyword scan needed.
+      - Keyword loop is used only when item_category is absent/UNCLASSIFIED
+        so we never skip a valid rule for an unclassified item.
+
+    Keyword matching uses token-safe phrase matching (via _shared.contains_phrase)
+    to prevent false positives like "cap" matching inside "capsule".
     """
-    desc_lower = item.description.lower()
+    desc_norm = normalize_text(item.description)
 
     for rule in rules:
         # If rule is plan-specific, skip if we're not on that plan
         if rule.plan_codes and plan_code and plan_code not in rule.plan_codes:
             continue
 
-        # Primary: category equality match
+        # Primary: category equality match (fast path — no keyword scan)
+        # Guards against None AND "UNCLASSIFIED" so both absent states are handled.
         category_matched = (
-            item_category
-            and item_category not in ("UNCLASSIFIED",)
+            not is_unclassified(item_category)
             and rule.item_category
             and item_category == rule.item_category
         )
@@ -68,10 +74,10 @@ def check_insurer_rules(
                 llm_used=False,
             )
 
-        # Fallback: keyword substring match
-        if not item_category or item_category == "UNCLASSIFIED":
+        # Fallback: token-safe keyword phrase match (only for unclassified items)
+        if is_unclassified(item_category):
             for keyword in rule.keywords:
-                if keyword.lower() in desc_lower:
+                if contains_phrase(desc_norm, normalize_text(keyword)):
                     payable = _compute_payable(item.billed_amount, rule)
                     effective_status = _effective_status(rule)
                     return AnalyzedLineItem(

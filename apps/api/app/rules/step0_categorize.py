@@ -14,17 +14,32 @@ All downstream steps fall back to their existing keyword logic gracefully.
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
-from app.schemas import BillItemInput, ItemCategory
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.schemas import BillItemInput
 from app.services.gpt_service import gpt_client, settings as gpt_settings
+
+if TYPE_CHECKING:
+    from app.models import ItemCategory as ItemCategoryModel
 
 logger = logging.getLogger(__name__)
 
-# ─── Fixed category taxonomy ──────────────────────────────────────────────────
-# These must stay in sync with the SYSTEM_PROMPT below and with the categories
-# used by step1_universal.py / insurer_rules / diagnosis_overrides in the DB.
+# ─── Compile-time fallback taxonomy ──────────────────────────────────────────
+# VALID_CATEGORIES is used ONLY when the item_categories DB table is empty
+# (e.g. before migration 011 runs).  It is intentionally NOT derived from the
+# ItemCategory enum so new DB-only categories (added after initial deploy) flow
+# through without requiring an enum change.
+# When item_categories rows ARE loaded, the engine builds valid_cats from those
+# codes and this constant is never consulted.
 
-VALID_CATEGORIES = {cat.value for cat in ItemCategory}
+VALID_CATEGORIES: frozenset[str] = frozenset({
+    "CONSUMABLE", "DIAGNOSTIC_TEST", "DRUG", "IMPLANT", "PROCEDURE",
+    "ROOM_RENT", "ADMIN", "NON_MEDICAL", "ATTENDANT", "EQUIPMENT_RENTAL",
+    "EXTERNAL_PHARMACY", "COSMETIC", "UNCLASSIFIED",
+})
 
 SYSTEM_PROMPT = """You are a medical billing classification expert specializing in Indian hospital bills.
 
@@ -61,19 +76,103 @@ Critical distinctions:
 Return ONLY the JSON object. No explanation."""
 
 
+# ─── DB-backed loaders and dynamic prompt builder ────────────────────────────
+
+
+async def load_item_categories(db: AsyncSession) -> list:
+    """Load all item_category rows. Returns list[ItemCategoryModel].
+
+    Returns an empty list if the table does not yet exist (pre-011 migration),
+    which is safe — callers fall back to VALID_CATEGORIES and SYSTEM_PROMPT.
+    """
+    try:
+        from app.models import ItemCategory as ItemCategoryModel  # local to avoid circular
+        result = await db.execute(select(ItemCategoryModel).order_by(ItemCategoryModel.code))
+        return result.scalars().all()
+    except Exception:
+        return []
+
+
+# Template variables: {CATEGORY_LIST}, {CATEGORY_EXAMPLES}
+_PROMPT_TEMPLATE = """\
+You are a medical billing classification expert specializing in Indian hospital bills.
+
+Your ONLY job is to assign a category to each hospital bill line item.
+You must NOT decide whether items are payable or not. Only classify.
+
+Return a JSON object where keys are the exact item descriptions provided and values are categories.
+
+Use EXACTLY one of these categories (no others):
+{CATEGORY_LIST}
+
+Examples per category:
+{CATEGORY_EXAMPLES}
+
+Critical distinctions:
+- "Blood collection tube" / "vacutainer" — DIAGNOSTIC_TEST, NOT a CONSUMABLE
+- "Culture kit" / "test kit" / "diagnostic kit" — DIAGNOSTIC_TEST, NOT a CONSUMABLE
+- "Biopsy needle" / "FNAC needle" — DIAGNOSTIC_TEST (needle is integral to the procedure)
+- "IV cannula" / "injection needle" — CONSUMABLE (used for drug delivery, not a test)
+- "Phaco machine charge" for cataract — PROCEDURE, NOT EQUIPMENT_RENTAL
+- "OT kit" / "surgical kit" — CONSUMABLE
+- Named drugs — DRUG, NOT CONSUMABLE
+
+Return ONLY the JSON object. No explanation."""
+
+
+def build_step0_prompt(categories: list) -> str:
+    """Build the Step 0 system prompt dynamically from ItemCategory DB rows.
+
+    If categories is empty, returns the hardcoded SYSTEM_PROMPT fallback.
+    """
+    if not categories:
+        return SYSTEM_PROMPT
+
+    codes_lines = []
+    example_lines = []
+    for cat in categories:
+        if cat.code == "UNCLASSIFIED":
+            continue
+        examples = ", ".join((cat.llm_examples or [])[:5]) or "—"
+        codes_lines.append(f"- {cat.code}: {cat.description or cat.display_name}")
+        example_lines.append(f"- {cat.code}: {examples}")
+
+    # UNCLASSIFIED always last
+    codes_lines.append("- UNCLASSIFIED: only if genuinely cannot determine from the description")
+    example_lines.append("- UNCLASSIFIED: incomprehensible or truly ambiguous items")
+
+    return _PROMPT_TEMPLATE.format(
+        CATEGORY_LIST="\n".join(codes_lines),
+        CATEGORY_EXAMPLES="\n".join(example_lines),
+    )
+
+
 async def batch_categorize_items(
     items: list[BillItemInput],
     diagnosis: str | None,
     billing_mode: str,
+    categories: list | None = None,
 ) -> dict[str, str]:
     """
     Sends all bill item descriptions to GPT-4o in one call.
     Returns a dict: {description -> category_string}.
 
+    categories — list of ItemCategory ORM rows loaded by the engine before the
+                 item loop.  When provided the prompt is built dynamically from
+                 the DB so new categories are picked up without code changes.
+                 When None/empty the hardcoded SYSTEM_PROMPT fallback is used.
+
     On any failure, returns {} so all rule steps fall back to keyword matching.
     """
     if not items:
         return {}
+
+    # Determine which category codes are valid for sanitization
+    valid_cats: set[str] = (
+        {cat.code for cat in categories} if categories else VALID_CATEGORIES
+    )
+
+    prompt = build_step0_prompt(categories) if categories else SYSTEM_PROMPT
 
     descriptions = [item.description for item in items]
 
@@ -90,7 +189,7 @@ async def batch_categorize_items(
         response = await gpt_client.chat.completions.create(
             model=gpt_settings.openai_model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": prompt},
                 {"role": "user", "content": user_message},
             ],
             response_format={"type": "json_object"},
@@ -101,20 +200,43 @@ async def batch_categorize_items(
         content = response.choices[0].message.content
         raw: dict = json.loads(content)
 
+        # Map common LLM hallucinations/near-misses back to valid categories
+        CATEGORY_ALIASES = {
+            "PHARMACY": "EXTERNAL_PHARMACY",
+            "DRUGS": "DRUG",
+            "MEDICINES": "DRUG",
+            "MEDICINE": "DRUG",
+            "CONSUMABLES": "CONSUMABLE",
+            "DIAGNOSTIC": "DIAGNOSTIC_TEST",
+            "DIAGNOSTICS": "DIAGNOSTIC_TEST",
+            "TEST": "DIAGNOSTIC_TEST",
+            "ROOM": "ROOM_RENT",
+            "IMPLANTS": "IMPLANT",
+            "PROCEDURES": "PROCEDURE",
+            "SURGERY": "PROCEDURE",
+            "ADMINISTRATIVE": "ADMIN",
+            "EQUIPMENT": "EQUIPMENT_RENTAL",
+        }
+
         # Sanitize: only keep known descriptions and valid categories
         result: dict[str, str] = {}
         for desc in descriptions:
             category = raw.get(desc)
-            if isinstance(category, str) and category.upper() in VALID_CATEGORIES:
-                result[desc] = category.upper()
-            else:
-                # GPT returned unknown category or missed this item — leave out so
-                # downstream steps use keyword fallback
-                if category:
-                    logger.warning(
-                        "step0: GPT returned unknown category %r for item %r — ignoring",
-                        category, desc,
-                    )
+            if isinstance(category, str):
+                cat_upper = category.upper()
+                # Apply alias map if it exists
+                cat_upper = CATEGORY_ALIASES.get(cat_upper, cat_upper)
+
+                if cat_upper in valid_cats:
+                    result[desc] = cat_upper
+                    continue
+
+            # GPT returned unknown category or missed this item
+            if category:
+                logger.warning(
+                    "step0: GPT returned unknown category %r for item %r — ignoring",
+                    category, desc,
+                )
 
         logger.info(
             "step0: categorized %d/%d items via LLM",

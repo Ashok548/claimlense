@@ -4,8 +4,8 @@ import { SummaryCards } from "@/components/results/SummaryCards";
 import { ResultsTable } from "@/components/results/ResultsTable";
 import { ActionChecklist } from "@/components/results/ActionChecklist";
 import { DownloadReportButton } from "@/components/results/DownloadReportButton";
-import { ShieldCheck, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ShareButton } from "@/components/results/ShareButton";
+import { ShieldCheck } from "lucide-react";
 import { BackButton } from "@/components/navigation/BackButton";
 
 type ActionItem = {
@@ -65,10 +65,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           <div className="flex gap-3 w-full sm:w-auto items-start">
             {/* Phase 3 hook */}
             <DownloadReportButton analysisId={analysisId} />
-            <Button className="flex-1 sm:flex-none bg-sky-500 hover:bg-sky-400 text-white">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
-            </Button>
+            <ShareButton analysisId={analysisId} insurerName={analysis.insurers.name} />
           </div>
         </div>
 
