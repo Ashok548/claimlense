@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, FileText, Loader2, Sparkles } from "lucide-react";
+import { UploadCloud, FileText, Loader2, Sparkles, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { ParseResponse } from "@/types/analyze";
@@ -17,6 +17,7 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [mismatchWarning, setMismatchWarning] = useState<string | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -73,6 +74,17 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
           parseData.general_ward_days ?? null,
         );
       }
+
+      // Warn when extracted total differs from item sum after cleanup
+      if (parseData.total_mismatch && parseData.extracted_total != null) {
+        setMismatchWarning(
+          `Parsed items sum to ₹${(parseData.calculated_total ?? 0).toLocaleString("en-IN")} ` +
+          `but the bill shows ₹${parseData.extracted_total.toLocaleString("en-IN")}. ` +
+          `Review the pre-filled items — some may be missing or need adjustment.`
+        );
+      } else {
+        setMismatchWarning(null);
+      }
     } catch (err: any) {
       setUploading(false);
       setParsing(false);
@@ -117,6 +129,7 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
   }
 
   return (
+    <>
     <div
       {...getRootProps()}
       className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-colors ${isDragReject
@@ -151,5 +164,13 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
         <span>Our AI will automatically extract all line items</span>
       </div>
     </div>
+
+    {mismatchWarning && (
+      <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-300">
+        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+        <span>{mismatchWarning}</span>
+      </div>
+    )}
+  </>
   );
 }

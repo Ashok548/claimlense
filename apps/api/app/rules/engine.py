@@ -260,19 +260,19 @@ async def analyze_claim(
 
     if _deduction_method == "proportional":
         if _icu_separate:
-            # Apply ward_ratio to non-room ward items, icu_ratio to ICU items.
-            # Items that are neither room-rent nor explicitly ICU get ward_ratio.
-            if ward_deduction_ratio < 1.0 or icu_deduction_ratio < 1.0:
-                def _ratio_for(it):
-                    if it.id in room_rent_item_ids:
-                        return 1.0
-                    if it.id in icu_room_rent_item_ids:
-                        return icu_deduction_ratio
-                    return ward_deduction_ratio
-
+            # Intent: apply ICU ratio only to ICU-phase items and ward ratio to others.
+            # Problem: non-room bill items (drugs, procedures, consumables) are NOT
+            # tagged by hospital phase — there is no per-item ICU/ward flag in the
+            # billing model. The previous _ratio_for closure was dead code because
+            # icu_room_rent_item_ids ⊂ room_rent_item_ids, so those items exited at
+            # the first branch and the ICU ratio was never returned.
+            # Correct behaviour: use the conservative minimum of both ratios for all
+            # non-room items. This matches what _icu_separate=False already does.
+            effective_ratio = min(ward_deduction_ratio, icu_deduction_ratio)
+            if effective_ratio < 1.0:
                 analyzed_items = [
-                    item if _ratio_for(item) == 1.0
-                    else apply_proportional_deduction(item, _ratio_for(item))
+                    item if item.id in room_rent_item_ids
+                    else apply_proportional_deduction(item, effective_ratio)
                     for item in analyzed_items
                 ]
         else:

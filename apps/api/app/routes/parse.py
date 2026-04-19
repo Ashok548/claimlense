@@ -1,12 +1,65 @@
 """FastAPI routes — POST /v1/parse (OCR + GPT-4o structured extraction)"""
 
 import json
+from typing import Sequence
 
 from fastapi import APIRouter, HTTPException
 import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Post-parse deterministic validators
+# These run after GPT extraction and before mismatch detection so that
+# structural errors (duplicates, leaked total rows) are removed before
+# the items are returned to the caller.
+# ---------------------------------------------------------------------------
+
+def _deduplicate_items(items: list) -> list:
+    """Remove exact (description, amount) duplicates that GPT sometimes emits.
+
+    Comparison is case-insensitive and ignores leading/trailing whitespace.
+    The first occurrence of each pair is kept; subsequent duplicates are dropped.
+    """
+    seen: set[tuple[str, float]] = set()
+    result = []
+    for item in items:
+        key = (item.description.strip().lower(), item.billed_amount)
+        if key not in seen:
+            seen.add(key)
+            result.append(item)
+    return result
+
+
+def _filter_bill_total_rows(items: list) -> list:
+    """Remove rows whose amount equals the sum of all other rows.
+
+    Hospital bills often contain a "Grand Total" or section-subtotal row that
+    GPT erroneously includes as a leaf item.  When such a row is present:
+        item.amount + sum(all other items) = 2 * item.amount  →  item.amount ≈ total/2
+    More precisely: abs(item.amount - sum(others)) < tolerance.
+
+    We iterate once and collect every item where that condition holds.
+    If removing candidate(s) leaves at least one item the filtered list is
+    returned; otherwise the original is returned unchanged (safety guard).
+    """
+    if len(items) <= 1:
+        return items
+
+    raw_total = sum(i.billed_amount for i in items)
+    TOLERANCE = max(2.0, raw_total * 0.001)  # 0.1 % of bill or ₹2, whichever is larger
+
+    filtered = [
+        i for i in items
+        if abs(i.billed_amount - (raw_total - i.billed_amount)) > TOLERANCE
+    ]
+    removed = len(items) - len(filtered)
+    if removed:
+        logger.info("parse: filtered %d apparent bill-total row(s) from extracted items", removed)
+    return filtered if filtered else items
+
 
 from app.schemas import ParseRequest, ParseResponse, ParsedItem
 from app.services.ocr_service import extract_text
@@ -219,6 +272,11 @@ async def parse_bill(request: ParseRequest) -> ParseResponse:
             for it in raw_items
             if it.get("description") and float(it.get("billed_amount", 0) or 0) > 0
         ]
+
+        # --- Deterministic post-parse cleanup ---
+        # Run before mismatch detection so the checks operate on clean data.
+        items = _deduplicate_items(items)
+        items = _filter_bill_total_rows(items)
 
         def _safe_int(val: any) -> int | None:
             try:

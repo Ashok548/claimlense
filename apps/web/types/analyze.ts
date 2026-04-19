@@ -104,6 +104,9 @@ export interface ParseResponse {
   items: ParsedItemResponse[];
   raw_item_count: number;
   parse_method: string;
+  extracted_total?: number | null;
+  calculated_total?: number;
+  total_mismatch?: boolean;
   admission_date?: string | null;
   discharge_date?: string | null;
   icu_days?: number | null;

@@ -33,10 +33,12 @@ def check_insurer_rules(
     Returns None if no match.
 
     item_category: pre-assigned category from Step 0.
-      - If category is known (non-UNCLASSIFIED, non-None) and matches
-        rule.item_category → direct match, no keyword scan needed.
-      - Keyword loop is used only when item_category is absent/UNCLASSIFIED
-        so we never skip a valid rule for an unclassified item.
+      - Category-only rule (rule.keywords is empty): fires for any item in that
+        category — broad insurer override (e.g. "cover ALL consumables").
+      - Category + keyword rule: BOTH must match — scoped to specific items within
+        the category (e.g. "CONSUMABLE, surgical gloves only").
+      - Keyword-only path: used when item_category is absent/UNCLASSIFIED — never
+        runs after a category was resolved to avoid broad-term false matches.
 
     Keyword matching uses token-safe phrase matching (via _shared.contains_phrase)
     to prevent false positives like "cap" matching inside "capsule".
@@ -48,7 +50,7 @@ def check_insurer_rules(
         if rule.plan_codes and plan_code and plan_code not in rule.plan_codes:
             continue
 
-        # Primary: category equality match (fast path — no keyword scan)
+        # Primary: category equality match.
         # Guards against None AND "UNCLASSIFIED" so both absent states are handled.
         category_matched = (
             not is_unclassified(item_category)
@@ -57,6 +59,29 @@ def check_insurer_rules(
         )
 
         if category_matched:
+            # When the rule also carries keywords it is scoped to specific items
+            # within that category — e.g. "CONSUMABLE rule, surgical gloves only".
+            # Both category AND keyword must match; keyword-only category rules
+            # (rule.keywords is empty) are treated as broad category overrides.
+            if rule.keywords:
+                kw_hit = any(
+                    contains_phrase(desc_norm, normalize_text(kw))
+                    for kw in rule.keywords
+                )
+                if not kw_hit:
+                    # Category matched but no keyword matched — this rule is not
+                    # the right one for this specific item; continue to next rule.
+                    continue
+                matched_kw = next(
+                    kw for kw in rule.keywords
+                    if contains_phrase(desc_norm, normalize_text(kw))
+                )
+                rule_tag = f"INSURER:{rule.item_category}:{matched_kw}"
+                confidence = 0.88
+            else:
+                rule_tag = f"INSURER:{rule.item_category}:CATEGORY_MATCH"
+                confidence = 0.88
+
             payable = _compute_payable(item.billed_amount, rule)
             effective_status = _effective_status(rule)
             return AnalyzedLineItem(
@@ -66,8 +91,8 @@ def check_insurer_rules(
                 payable_amount=payable,
                 status=effective_status,
                 category=rule.item_category,
-                rule_matched=f"INSURER:{rule.item_category}:CATEGORY_MATCH",
-                confidence=0.88,
+                rule_matched=rule_tag,
+                confidence=confidence,
                 confidence_basis=ConfidenceBasis.INSURER_RULE,
                 rejection_reason=rule.reason if effective_status != PayabilityStatus.PAYABLE else None,
                 recovery_action=_recovery(rule),
