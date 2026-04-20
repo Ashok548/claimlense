@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getFirebaseIdToken } from "@/lib/firebase";
 
 interface Props {
   analysisId: string;
@@ -16,7 +17,12 @@ export function DownloadReportButton({ analysisId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/reports/${analysisId}/pdf`);
+      const firebaseToken = await getFirebaseIdToken();
+      const res = await fetch(`/api/reports/${analysisId}/pdf`, {
+        headers: {
+          Authorization: `Bearer ${firebaseToken}`,
+        },
+      });
       if (!res.ok) {
         throw new Error("Failed to formulate report");
       }
@@ -30,8 +36,9 @@ export function DownloadReportButton({ analysisId }: Props) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
     } finally {
       setLoading(false);
     }

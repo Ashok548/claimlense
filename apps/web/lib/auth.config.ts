@@ -17,12 +17,15 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isAuthPage = nextUrl.pathname.startsWith("/login");
+      const isAuthPage =
+        nextUrl.pathname.startsWith("/login") ||
+        nextUrl.pathname.startsWith("/register");
       const isProtectedRoute =
         nextUrl.pathname.startsWith("/dashboard") ||
         nextUrl.pathname.startsWith("/reports") ||
         nextUrl.pathname.startsWith("/results") ||
-        nextUrl.pathname.startsWith("/analyze");
+        nextUrl.pathname.startsWith("/analyze") ||
+        nextUrl.pathname.startsWith("/admin");
 
       if (isAuthPage) {
         if (isLoggedIn) {

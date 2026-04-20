@@ -4,6 +4,7 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { auth } from "@/lib/auth";
 import { AppNavbar } from "@/components/navigation/AppNavbar";
+import { prisma } from "@/lib/prisma";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -20,6 +21,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  
+  let credits = undefined;
+  if (session?.user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { credits: true }
+    });
+    if (dbUser) credits = dbUser.credits;
+  }
 
   return (
     <html lang="en" className="dark">
@@ -28,6 +38,7 @@ export default async function RootLayout({
           <AppNavbar
             isAuthenticated={!!session?.user}
             userName={session?.user?.name ?? session?.user?.email}
+            credits={credits}
           />
           {children}
         </TooltipProvider>

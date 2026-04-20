@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies import CurrentUser
 from app.services.report_service import get_or_generate_report
 
 router = APIRouter(prefix="/v1/report", tags=["report"])
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/v1/report", tags=["report"])
 @router.get("/{analysis_id}")
 async def generate_report(
     analysis_id: uuid.UUID,
+    _current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
     try:

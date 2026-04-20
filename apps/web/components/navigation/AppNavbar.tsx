@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, LogOut, ShieldCheck, User } from "lucide-react";
+import { ArrowRight, LogOut, ShieldCheck, User, Coins } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { signOut as firebaseSignOut } from "firebase/auth";
+import { firebaseAuth } from "@/lib/firebase";
 import { useEffect, useRef, useState } from "react";
 
 type AppNavbarProps = {
   isAuthenticated: boolean;
   userName?: string | null;
+  credits?: number;
 };
 
-export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
+export function AppNavbar({ isAuthenticated, userName, credits }: AppNavbarProps) {
   const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -100,14 +103,27 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
               </button>
               {userMenuOpen && (
                 <div className="absolute right-0 top-11 z-50 w-44 overflow-hidden rounded-xl border border-white/10 bg-[hsl(222,47%,7%)] shadow-xl shadow-black/40">
-                  <div className="border-b border-white/5 px-3 py-2.5">
-                    <p className="truncate text-xs text-slate-400">{userName}</p>
+                  <div className="border-b border-white/5 flex flex-col gap-1 px-3 py-2.5">
+                    <p className="truncate text-xs font-semibold text-white">{userName}</p>
                   </div>
+                  
+                  <Link
+                    href="/credits"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Coins className="h-4 w-4 text-emerald-400" />
+                    <span>Credits:</span>
+                    <span className="font-bold text-emerald-400 ml-auto">{credits ?? '-'}</span>
+                  </Link>
+
                   <button
                     type="button"
                     onClick={() => {
                       setUserMenuOpen(false);
-                      signOut({ callbackUrl: "/" });
+                      firebaseSignOut(firebaseAuth).finally(() => {
+                        signOut({ callbackUrl: "/" });
+                      });
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
                   >

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies import CurrentUser
 from app.rules.engine import analyze_claim
 from app.schemas import AnalyzeRequest, AnalyzeResponse
 
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/v1/analyze", tags=["analyze"])
 @router.post("/", response_model=AnalyzeResponse)
 async def analyze(
     request: AnalyzeRequest,
+    _current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> AnalyzeResponse:
     try:

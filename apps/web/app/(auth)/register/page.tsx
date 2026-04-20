@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
@@ -17,18 +19,15 @@ import { Label } from "@/components/ui/label";
 
 const googleProvider = new GoogleAuthProvider();
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // Security: only allow relative paths to prevent open redirect attacks
-  const rawCallback = searchParams.get("callbackUrl") || "/reports";
-  const callbackUrl = rawCallback.startsWith("/") ? rawCallback : "/reports";
-  
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
 
   async function loginWithNextAuth(firebaseToken: string) {
     const res = await signIn("credentials", {
@@ -36,40 +35,39 @@ export default function LoginPage() {
       firebaseToken,
     });
     if (res?.error) {
-      setError("Sign-in failed. Please try again.");
+      setError("Account created but sign-in failed. Please try logging in.");
     } else {
-      router.push(callbackUrl);
+      router.push("/reports");
       router.refresh();
     }
   }
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      const credential = await signInWithEmailAndPassword(
+      const credential = await createUserWithEmailAndPassword(
         firebaseAuth,
         email,
         password
       );
-      if (!credential.user.emailVerified) {
-        await firebaseAuth.signOut();
-        setError("Please verify your email before signing in. Check your inbox for the verification link.");
-        return;
-      }
-      const firebaseToken = await credential.user.getIdToken();
-      await loginWithNextAuth(firebaseToken);
+      // Set display name in Firebase so it propagates to Prisma on upsert
+      await updateProfile(credential.user, { displayName: name.trim() || email.split("@")[0] });
+      // Send verification email — do NOT sign in until verified
+      await sendEmailVerification(credential.user);
+      await firebaseAuth.signOut();
+      setVerificationSent(true);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
-      if (
-        code === "auth/user-not-found" ||
-        code === "auth/wrong-password" ||
-        code === "auth/invalid-credential"
-      ) {
-        setError("Invalid email or password.");
+      if (code === "auth/email-already-in-use") {
+        setError("An account with this email already exists. Please sign in.");
+      } else if (code === "auth/weak-password") {
+        setError("Password must be at least 6 characters.");
+      } else if (code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
       } else {
-        setError("An unexpected error occurred.");
+        setError("Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -105,19 +103,29 @@ export default function LoginPage() {
             <div className="w-16 h-16 rounded-full bg-sky-500/10 flex items-center justify-center mb-4 border border-sky-500/20">
               <ShieldCheck className="w-8 h-8 text-sky-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-white">Create account</h1>
             <p className="text-slate-400 text-sm mt-2 text-center">
-              Sign in to manage your analyses and claim reports.
+              Start analysing claims in seconds.
             </p>
           </div>
 
+          {verificationSent ? (
+            <div className="text-center py-4">
+              <div className="mb-4 p-4 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-300 text-sm">
+                A verification email has been sent to <strong>{email}</strong>.<br />
+                Please check your inbox and click the link to verify your account, then{" "}
+                <a href="/login" className="underline hover:text-sky-200">sign in</a>.
+              </div>
+            </div>
+          ) : (
+            <>
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
               {error}
             </div>
           )}
 
-          {/* Google Sign-In */}
+          {/* Google Sign-Up */}
           <Button
             type="button"
             variant="outline"
@@ -156,8 +164,22 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          {/* Email / Password */}
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
+          {/* Email / Password Registration */}
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-slate-300">
+                Full Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Dr. Ashok Kumar"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-sky-500"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300">
                 Email Address
@@ -180,10 +202,11 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Min. 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
                 className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-sky-500"
               />
             </div>
@@ -193,19 +216,24 @@ export default function LoginPage() {
               disabled={loading || googleLoading}
               className="w-full bg-sky-500 hover:bg-sky-400 text-white mt-2 shadow-lg shadow-sky-500/20"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                "Create Account"
+              )}
             </Button>
           </form>
 
           <p className="text-sm text-slate-500 text-center mt-6">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-sky-400 hover:text-sky-300">
-              Create one
+            Already have an account?{" "}
+            <Link href="/login" className="text-sky-400 hover:text-sky-300">
+              Sign in
             </Link>
           </p>
+            </>
+          )}
         </div>
       </div>
     </main>
   );
 }
-

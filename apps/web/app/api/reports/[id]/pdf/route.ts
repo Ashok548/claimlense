@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    const firebaseAuthorization = req.headers.get("authorization");
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!firebaseAuthorization?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Missing Firebase token" }, { status: 401 });
+    }
+
     const resolvedParams = await params;
     const analysisId = resolvedParams.id;
     if (!analysisId) {
@@ -16,6 +28,7 @@ export async function GET(
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: firebaseAuthorization,
       },
     });
 

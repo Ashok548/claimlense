@@ -6,47 +6,49 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── Alembic Introspected Tables (FastAPI Core) ───────────────────────────────
-
 model alembic_version {
   version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
 }
 
 model bill_line_items {
-  id               String            @id @db.Uuid
-  analysis_id      String            @db.Uuid
-  description      String
-  billed_amount    Decimal           @db.Decimal(10, 2)
-  payable_amount   Decimal?          @db.Decimal(10, 2)
-  status           payability_status
-  category         String?           @db.VarChar(100)
-  rule_matched     String?           @db.VarChar(200)
-  confidence       Decimal?          @db.Decimal(4, 3)
-  rejection_reason String?
-  recovery_action  String?
-  llm_used         Boolean?
-  claim_analyses   claim_analyses    @relation(fields: [analysis_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                 String            @id @db.Uuid
+  analysis_id        String            @db.Uuid
+  description        String
+  billed_amount      Decimal           @db.Decimal(10, 2)
+  payable_amount     Decimal?          @db.Decimal(10, 2)
+  status             payability_status
+  category           String?           @db.VarChar(100)
+  rule_matched       String?           @db.VarChar(200)
+  confidence         Decimal?          @db.Decimal(4, 3)
+  rejection_reason   String?
+  recovery_action    String?
+  llm_used           Boolean?
+  decision_source    String?           @db.VarChar(100)
+  policy_basis_id    String?           @db.VarChar(200)
+  policy_basis_text  String?
+  payable_pct_source String?           @db.VarChar(50)
+  claim_analyses     claim_analyses    @relation(fields: [analysis_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model claim_analyses {
-  id                 String            @id @db.Uuid
-  insurer_id         String            @db.Uuid
-  user_ref           String?           @db.Uuid
-  billing_mode       billing_mode?
-  policy_type        policy_type?
-  hospital_type      hospital_type?
-  diagnosis          String?           @db.VarChar(300)
-  sum_insured        Decimal           @db.Decimal(12, 2)
-  room_rent_limit    Decimal?          @db.Decimal(10, 2)
-  total_billed       Decimal?          @db.Decimal(12, 2)
-  total_payable      Decimal?          @db.Decimal(12, 2)
-  total_pending_verification Decimal?  @db.Decimal(12, 2)
-  total_at_risk      Decimal?          @db.Decimal(12, 2)
-  rejection_rate_pct Decimal?          @db.Decimal(5, 2)
-  action_items       Json?             @db.Json
-  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
-  bill_line_items    bill_line_items[]
-  insurers           insurers          @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                         String            @id @db.Uuid
+  insurer_id                 String            @db.Uuid
+  user_ref                   String?           @db.Uuid
+  billing_mode               billing_mode?
+  policy_type                policy_type?
+  hospital_type              hospital_type?
+  diagnosis                  String?           @db.VarChar(300)
+  sum_insured                Decimal           @db.Decimal(12, 2)
+  room_rent_limit            Decimal?          @db.Decimal(10, 2)
+  total_billed               Decimal?          @db.Decimal(12, 2)
+  total_payable              Decimal?          @db.Decimal(12, 2)
+  total_at_risk              Decimal?          @db.Decimal(12, 2)
+  rejection_rate_pct         Decimal?          @db.Decimal(5, 2)
+  action_items               Json?             @db.Json
+  created_at                 DateTime?         @default(now()) @db.Timestamptz(6)
+  total_pending_verification Decimal?          @default(0) @db.Decimal(12, 2)
+  bill_line_items            bill_line_items[]
+  insurers                   insurers          @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model diagnosis_overrides {
@@ -82,15 +84,280 @@ model insurer_rules {
 }
 
 model insurers {
-  id                String           @id @db.Uuid
-  code              String           @unique @db.VarChar(50)
-  name              String           @db.VarChar(200)
-  logo_url          String?          @db.VarChar(500)
-  plans             Json?            @db.Json
-  room_rent_default Int?
-  is_active         Boolean?
-  claim_analyses    claim_analyses[]
-  insurer_rules     insurer_rules[]
+  id                 String               @id @db.Uuid
+  code               String               @unique @db.VarChar(50)
+  name               String               @db.VarChar(200)
+  logo_url           String?              @db.VarChar(500)
+  plans              Json?                @db.Json
+  room_rent_default  Int?
+  is_active          Boolean?
+  billing_mode_rules billing_mode_rules[]
+  claim_analyses     claim_analyses[]
+  insurer_rules      insurer_rules[]
+  plans_rel          plans[]
+  riders             riders[]
+  room_rent_config   room_rent_config[]
+  sublimit_rules     sublimit_rules[]
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String?     @unique
+  emailVerified DateTime?
+  phone         String?     @unique
+  image         String?
+  plan             Plan              @default(FREE)
+  credits          Int               @default(200)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  password         String?
+  firebaseUid      String?           @unique
+  accounts         Account[]
+  payments         Payment[]
+  reports          Report[]
+  sessions         Session[]
+  jobs             UploadJob[]
+  promoRedemptions PromoRedemption[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  userId       String
+  analysisId   String
+  insurerName  String
+  insurerCode  String
+  diagnosis    String?
+  totalBilled  Decimal      @db.Decimal(12, 2)
+  totalPayable Decimal      @db.Decimal(12, 2)
+  totalAtRisk  Decimal      @db.Decimal(12, 2)
+  rejectionPct Decimal      @db.Decimal(5, 2)
+  pdfR2Key     String?
+  status       ReportStatus @default(DRAFT)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  payments     Payment[]
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@map("reports")
+}
+
+model UploadJob {
+  id               String    @id @default(cuid())
+  userId           String
+  r2Key            String
+  originalFilename String
+  fileType         FileType
+  status           JobStatus @default(PENDING)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id])
+
+  @@map("upload_jobs")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  reportId          String?
+  razorpayOrderId   String
+  razorpayPaymentId String?
+  amountPaise       Int
+  status            PaymentStatus @default(PENDING)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  report            Report?       @relation(fields: [reportId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+model billing_mode_rules {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insurer_id         String?       @db.Uuid
+  plan_codes         String[]
+  item_category      String        @db.VarChar(50)
+  billing_mode       String        @db.VarChar(20)
+  verdict            String        @db.VarChar(30)
+  payable_pct        Decimal?      @db.Decimal(5, 2)
+  reason             String
+  recovery           String?
+  fallback_kw_set_id String?       @db.Uuid
+  priority           Int           @default(0)
+  bypass_categories  String[]
+  keyword_sets       keyword_sets? @relation(fields: [fallback_kw_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  insurers           insurers?     @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([insurer_id, billing_mode, item_category], map: "ix_billing_mode_rules_insurer_mode")
+}
+
+model diagnosis_synonym_groups {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  base_term  String   @unique(map: "uq_diagnosis_synonym_base_term")
+  synonyms   String[] @default([])
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model item_categories {
+  code                  String   @id @db.VarChar(50)
+  display_name          String   @db.VarChar(100)
+  description           String?
+  never_excluded        Boolean  @default(false)
+  is_payable_by_default Boolean  @default(false)
+  llm_examples          String[]
+  recovery_template     String?
+  created_at            DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model keyword_sets {
+  id                                                                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                                                                String                   @unique @db.VarChar(100)
+  keywords                                                            String[]
+  description                                                         String?
+  is_system                                                           Boolean                  @default(false)
+  created_at                                                          DateTime                 @default(now()) @db.Timestamptz(6)
+  billing_mode_rules                                                  billing_mode_rules[]
+  rider_coverage_clauses                                              rider_coverage_clauses[]
+  room_rent_config_room_rent_config_detection_kw_set_idTokeyword_sets room_rent_config[]       @relation("room_rent_config_detection_kw_set_idTokeyword_sets")
+  room_rent_config_room_rent_config_icu_kw_set_idTokeyword_sets       room_rent_config[]       @relation("room_rent_config_icu_kw_set_idTokeyword_sets")
+
+  @@index([name], map: "ix_keyword_sets_name")
+}
+
+model plan_riders {
+  plan_id  String @db.Uuid
+  rider_id String @db.Uuid
+  plans    plans  @relation(fields: [plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  riders   riders @relation(fields: [rider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([plan_id, rider_id])
+}
+
+model plans {
+  id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insurer_id              String        @db.Uuid
+  code                    String        @db.VarChar(50)
+  name                    String        @db.VarChar(200)
+  description             String?
+  room_rent_limit_pct     Decimal?      @db.Decimal(4, 2)
+  room_rent_limit_abs     Decimal?      @db.Decimal(10, 2)
+  co_pay_pct              Decimal?      @default(0) @db.Decimal(4, 2)
+  icu_limit_pct           Decimal?      @db.Decimal(4, 2)
+  consumables_covered     Boolean?      @default(false)
+  consumables_sublimit    Decimal?      @db.Decimal(10, 2)
+  is_active               Boolean?      @default(true)
+  metadata                Json?
+  icu_room_rent_limit_abs Decimal?      @db.Decimal(10, 2)
+  plan_riders             plan_riders[]
+  insurers                insurers      @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([insurer_id, code])
+}
+
+model rider_coverage_clauses {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rider_id            String        @db.Uuid
+  target_categories   String[]
+  fallback_kw_set_id  String?       @db.Uuid
+  verdict             String        @default("PAYABLE") @db.VarChar(30)
+  payable_pct         Decimal?      @db.Decimal(5, 2)
+  only_rescues_status String[]      @default(["NOT_PAYABLE", "VERIFY_WITH_TPA"])
+  priority            Int           @default(0)
+  reason_template     String
+  created_at          DateTime      @default(now()) @db.Timestamptz(6)
+  keyword_sets        keyword_sets? @relation(fields: [fallback_kw_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  riders              riders        @relation(fields: [rider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([rider_id], map: "ix_rider_coverage_clauses_rider_id")
+}
+
+model riders {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insurer_id              String                   @db.Uuid
+  code                    String                   @db.VarChar(50)
+  name                    String                   @db.VarChar(200)
+  description             String?
+  covers_consumables      Boolean?                 @default(false)
+  covers_opd              Boolean?                 @default(false)
+  covers_maternity        Boolean?                 @default(false)
+  covers_dental           Boolean?                 @default(false)
+  covers_critical_illness Boolean?                 @default(false)
+  additional_sum_insured  Decimal?                 @db.Decimal(12, 2)
+  is_active               Boolean?                 @default(true)
+  metadata                Json?
+  plan_riders             plan_riders[]
+  rider_coverage_clauses  rider_coverage_clauses[]
+  insurers                insurers                 @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([insurer_id, code])
+}
+
+model room_rent_config {
+  id                                                              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insurer_id                                                      String?      @db.Uuid
+  plan_codes                                                      String[]
+  detection_kw_set_id                                             String       @db.Uuid
+  icu_kw_set_id                                                   String       @db.Uuid
+  deduction_method                                                String       @default("proportional") @db.VarChar(30)
+  icu_deduction_separate                                          Boolean      @default(true)
+  priority                                                        Int          @default(0)
+  keyword_sets_room_rent_config_detection_kw_set_idTokeyword_sets keyword_sets @relation("room_rent_config_detection_kw_set_idTokeyword_sets", fields: [detection_kw_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  keyword_sets_room_rent_config_icu_kw_set_idTokeyword_sets       keyword_sets @relation("room_rent_config_icu_kw_set_idTokeyword_sets", fields: [icu_kw_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  insurers                                                        insurers?    @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([insurer_id, priority], map: "ix_room_rent_config_insurer_priority")
+}
+
+model sublimit_rules {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insurer_id    String   @db.Uuid
+  item_category String   @db.VarChar(100)
+  plan_codes    String[]
+  max_amount    Decimal  @db.Decimal(12, 2)
+  note          String?
+  insurers      insurers @relation(fields: [insurer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([insurer_id, item_category], map: "ix_sublimit_rules_insurer_category")
 }
 
 enum billing_mode {
@@ -116,128 +383,6 @@ enum policy_type {
   floater
   group
 }
-
-// ─── Auth (NextAuth.js v5) ────────────────────────────────────────────────────
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  password      String?
-  emailVerified DateTime?
-  phone         String?   @unique
-  image         String?
-  plan          Plan      @default(FREE)
-  credits       Int       @default(3)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts   Account[]
-  sessions   Session[]
-  reports    Report[]
-  jobs       UploadJob[]
-  payments   Payment[]
-
-  @@map("users")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
-// ─── Business Tables ──────────────────────────────────────────────────────────
-
-model Report {
-  id             String       @id @default(cuid())
-  userId         String
-  analysisId     String       // UUID from FastAPI claim_analyses table
-  insurerName    String
-  insurerCode    String
-  diagnosis      String?
-  totalBilled    Decimal      @db.Decimal(12, 2)
-  totalPayable   Decimal      @db.Decimal(12, 2)
-  totalAtRisk    Decimal      @db.Decimal(12, 2)
-  rejectionPct   Decimal      @db.Decimal(5, 2)
-  pdfR2Key       String?      // R2 object key for generated PDF
-  status         ReportStatus @default(DRAFT)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  user     User      @relation(fields: [userId], references: [id])
-  payments Payment[]
-
-  @@map("reports")
-}
-
-model UploadJob {
-  id               String    @id @default(cuid())
-  userId           String
-  r2Key            String
-  originalFilename String
-  fileType         FileType
-  status           JobStatus @default(PENDING)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("upload_jobs")
-}
-
-model Payment {
-  id               String        @id @default(cuid())
-  userId           String
-  reportId         String?
-  razorpayOrderId  String
-  razorpayPaymentId String?
-  amountPaise      Int
-  status           PaymentStatus @default(PENDING)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  user   User    @relation(fields: [userId], references: [id])
-  report Report? @relation(fields: [reportId], references: [id])
-
-  @@map("payments")
-}
-
-// ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum Plan {
   FREE
@@ -268,4 +413,30 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+model PromoCode {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  creditsValue Int
+  maxUses      Int      @default(1)
+  usedCount    Int      @default(0)
+  expiresAt    DateTime?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  redemptions  PromoRedemption[]
+  
+  @@map("promo_codes")
+}
+
+model PromoRedemption {
+  id          String    @id @default(cuid())
+  userId      String
+  promoCodeId String
+  redeemedAt  DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  
+  @@unique([userId, promoCodeId])
+  @@map("promo_redemptions")
 }

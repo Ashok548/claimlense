@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileSearch,
   TrendingDown,
@@ -11,6 +12,7 @@ import {
   AlertTriangle,
   XCircle,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +91,35 @@ const EXAMPLE_ITEMS = [
 ];
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(false);
+
+  const handleStartAnalysis = async () => {
+    setIsChecking(true);
+    try {
+      const res = await fetch("/api/check-credits");
+      if (res.status === 401) {
+        router.push("/login?callbackUrl=/analyze");
+        return;
+      }
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.credits >= 200) {
+          router.push("/analyze");
+        } else {
+          router.push("/credits");
+        }
+      } else {
+        router.push("/analyze"); // Fallback
+      }
+    } catch {
+      router.push("/analyze"); // Fallback
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[hsl(222,47%,4%)] overflow-hidden">
       {/* Hero Section */}
@@ -117,15 +148,15 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/analyze">
-                <Button
-                  size="lg"
-                  className="bg-sky-500 hover:bg-sky-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-sky-500/25 transition-all hover:shadow-sky-500/40 hover:scale-105"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  Analyze My Bill Free
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                onClick={handleStartAnalysis}
+                disabled={isChecking}
+                className="bg-sky-500 hover:bg-sky-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-sky-500/25 transition-all hover:shadow-sky-500/40 hover:scale-105"
+              >
+                {isChecking ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Zap className="w-5 h-5 mr-2" />}
+                Analyze My Bill
+              </Button>
               <Button
                 variant="outline"
                 size="lg"
@@ -252,17 +283,17 @@ export default function LandingPage() {
             Don&apos;t Lose Money on a Preventable Rejection
           </h2>
           <p className="text-slate-400 mb-8">
-            3 free analyses. No credit card. No login required for the first check.
+            Get 200 credits free on sign-up. Each analysis uses 200 credits. Top up anytime for ₹200.
           </p>
-          <Link href="/analyze">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-400 text-white font-semibold px-10 py-6 text-lg rounded-xl shadow-lg shadow-sky-500/25 hover:scale-105 transition-all"
-            >
-              Start Free Analysis
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            onClick={handleStartAnalysis}
+            disabled={isChecking}
+            className="bg-sky-500 hover:bg-sky-400 text-white font-semibold px-10 py-6 text-lg rounded-xl shadow-lg shadow-sky-500/25 hover:scale-105 transition-all"
+          >
+            {isChecking ? "Checking..." : "Start Analysis"}
+            {!isChecking && <ArrowRight className="w-5 h-5 ml-2" />}
+          </Button>
         </div>
       </section>
 

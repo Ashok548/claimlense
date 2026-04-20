@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { InsurerSelector } from "@/components/analyze/InsurerSelector";
 import { PlanSelector } from "@/components/analyze/PlanSelector";
@@ -11,16 +11,40 @@ import { UploadZone } from "@/components/analyze/UploadZone";
 import { StayDurationDialog } from "@/components/analyze/StayDurationDialog";
 import { PolicyType, HospitalType, BillingMode, BillItemInput, AnalyzeRequest, PlanDetail, InsurerResponse } from "@/types/analyze";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft, Send, ShieldCheck, Loader2, BedDouble, Pencil } from "lucide-react";
+import { ChevronRight, ChevronLeft, Send, ShieldCheck, Loader2, BedDouble, Pencil, Coins } from "lucide-react";
 import { BackButton } from "@/components/navigation/BackButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getFirebaseIdToken } from "@/lib/firebase";
+import Link from "next/link";
 
 const STEPS = ["Insurer", "Plan & Riders", "Policy", "Diagnosis", "Bill Items"];
 
 export default function AnalyzeWizard() {
   const router = useRouter();
   
+  // -- Credit Gate: check on mount
+  const [creditsChecked, setCreditsChecked] = useState(false);
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/check-credits")
+      .then(async (res) => {
+        if (res.status === 401) {
+          router.replace("/login?callbackUrl=/analyze");
+          return;
+        }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.credits < 200) {
+            setInsufficientCredits(true);
+          }
+        }
+        setCreditsChecked(true);
+      })
+      .catch(() => setCreditsChecked(true)); // allow page to load on network error
+  }, [router]);
+
   // -- Wizard State
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -99,9 +123,13 @@ export default function AnalyzeWizard() {
     };
 
     try {
+      const firebaseToken = await getFirebaseIdToken();
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${firebaseToken}`,
+        },
         body: JSON.stringify(payload)
       });
 
@@ -128,6 +156,34 @@ export default function AnalyzeWizard() {
           <h1 className="text-3xl font-bold">New Bill Analysis</h1>
         </div>
 
+        {/* Credit gate: loading spinner while we verify credits */}
+        {!creditsChecked && (
+          <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span>Verifying account...</span>
+          </div>
+        )}
+
+        {/* Blocked state: not enough credits */}
+        {creditsChecked && insufficientCredits && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-8 text-center">
+            <Coins className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">Insufficient Credits</h2>
+            <p className="text-slate-400 mb-6">
+              You need at least <strong className="text-white">200 credits</strong> to run an analysis. Top up your wallet to continue.
+            </p>
+            <Link
+              href="/credits"
+              className="inline-flex items-center justify-center rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-medium px-8 h-8 transition-colors"
+            >
+              Open Credits Wallet →
+            </Link>
+          </div>
+        )}
+
+        {/* Main wizard — only shown when credits are OK */}
+        {creditsChecked && !insufficientCredits && (
+          <>
         {/* Stepper */}
         <div className="flex items-center justify-between mb-8 overflow-x-auto pb-4">
           {STEPS.map((label, idx) => (
@@ -190,7 +246,7 @@ export default function AnalyzeWizard() {
               {planDetail && planDetail.riders && planDetail.riders.length > 0 && (
                 <div className="pt-8 border-t border-white/5 animate-in fade-in slide-in-from-bottom-2">
                   <h2 className="text-xl font-semibold mb-2">Select Active Add-on Riders (Optional)</h2>
-                  <p className="text-slate-400 mb-6 text-sm">Select any riders configured in your policy to ensure items like consumables or OPD aren't incorrectly rejected.</p>
+                  <p className="text-slate-400 mb-6 text-sm">Select any riders configured in your policy to ensure items like consumables or OPD aren&apos;t incorrectly rejected.</p>
                   <RiderSelector 
                     riders={planDetail.riders}
                     selectedRiderCodes={riderCodes}
@@ -242,7 +298,7 @@ export default function AnalyzeWizard() {
               <h2 className="text-xl font-semibold mb-2">Enter Hospital Bill Items</h2>
               <p className="text-slate-400 mb-6">Upload a hospital bill to let our AI extract items, or add them manually below.</p>
 
-              {/* Stay duration summary — shown when detected from bill or entered via popup */}
+              {/* Stay duration summary */}
               {((icuDays ?? 0) > 0 || (generalWardDays ?? 0) > 0) && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 mb-6 flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 text-emerald-300">
@@ -347,21 +403,22 @@ export default function AnalyzeWizard() {
             </Button>
           )}
         </div>
-      </div>
 
-      {/* Mandatory stay-duration popup — shown when the system cannot detect days from bill */}
-      <StayDurationDialog
-        open={stayDialogOpen}
-        onConfirm={({ icuDays: icu, generalWardDays: ward }) => {
-          setIcuDays(icu);
-          setGeneralWardDays(ward);
-          setStayDetectedByBill(false);
-          setStayDialogOpen(false);
-          // Re-trigger submit with the now-populated stay info
-          const hasStay = (icu ?? 0) > 0 || (ward ?? 0) > 0;
-          if (hasStay) submitAnalysis();
-        }}
-      />
+        {/* Mandatory stay-duration popup */}
+        <StayDurationDialog
+          open={stayDialogOpen}
+          onConfirm={({ icuDays: icu, generalWardDays: ward }) => {
+            setIcuDays(icu);
+            setGeneralWardDays(ward);
+            setStayDetectedByBill(false);
+            setStayDialogOpen(false);
+            const hasStay = (icu ?? 0) > 0 || (ward ?? 0) > 0;
+            if (hasStay) submitAnalysis();
+          }}
+        />
+          </>
+        )}
+      </div>
     </div>
   );
 }

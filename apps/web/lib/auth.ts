@@ -1,47 +1,76 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { adminAuth } from "@/lib/firebase-admin";
 import { authConfig } from "./auth.config";
+import { Plan } from "@prisma/client";
+
+const VALID_PLANS = new Set<string>(Object.values(Plan));
+function toPlan(value: unknown): Plan {
+  return typeof value === "string" && VALID_PLANS.has(value)
+    ? (value as Plan)
+    : Plan.FREE;
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 60 * 60 }, // 1 hour — aligns with Firebase token expiry
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "Firebase",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        firebaseToken: { label: "Firebase Token", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        const token = credentials?.firebaseToken as string | undefined;
+        if (!token) return null;
 
-        const email = credentials.email as string;
-        const password = credentials.password as string;
+        // Verify token with Firebase Admin — throws if invalid/expired
+        let decoded: Awaited<ReturnType<typeof adminAuth.verifyIdToken>>;
+        try {
+          decoded = await adminAuth.verifyIdToken(token);
+        } catch {
+          return null;
+        }
 
-        let user = await prisma.user.findUnique({
-          where: { email }
+        const { uid, email, name, picture } = decoded;
+        // Read plan from Firebase custom claims — set via seed script or admin API.
+        // Falls back to FREE for users who haven't been assigned a plan yet.
+        const claimPlan = toPlan(decoded["plan"]);
+
+        // Mirror / update user in PostgreSQL on every sign-in.
+        // If a row already exists for the same email (seeded or legacy auth),
+        // attach the Firebase UID instead of trying to create a duplicate.
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { firebaseUid: uid },
+              ...(email ? [{ email }] : []),
+            ],
+          },
         });
 
-        if (!user) {
-          // Auto-sign up for demo purposes
-          const hashedPassword = await bcrypt.hash(password, 10);
-          user = await prisma.user.create({
-            data: {
-              email,
-              password: hashedPassword,
-              name: email.split("@")[0],
-            }
-          });
-        } else {
-          // If user exists, check password
-          if (!user.password) return null;
-          const isValid = await bcrypt.compare(password, user.password);
-          if (!isValid) return null;
-        }
+        const user = existingUser
+          ? await prisma.user.update({
+              where: { id: existingUser.id },
+              data: {
+                firebaseUid: uid,
+                email: email ?? existingUser.email,
+                name: name ?? existingUser.name,
+                image: picture ?? existingUser.image,
+                plan: claimPlan,
+              },
+            })
+          : await prisma.user.create({
+              data: {
+                firebaseUid: uid,
+                email: email ?? null,
+                name: name ?? email?.split("@")[0] ?? null,
+                image: picture ?? null,
+                plan: claimPlan,
+                // credits default to 200 from schema
+              },
+            });
 
         return {
           id: user.id,
@@ -49,7 +78,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           plan: user.plan,
         };
-      }
-    })
-  ]
+      },
+    }),
+  ],
 });
+

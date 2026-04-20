@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Coins, Crown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/navigation/BackButton";
 import { ReportHistoryTable } from "@/components/dashboard/ReportHistoryTable";
+import { isProAdmin } from "@/lib/admin";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -33,7 +33,8 @@ export default async function DashboardPage() {
     createdAt: report.createdAt.toISOString(),
   }));
   const credits = dbUser.credits;
-  const hasCredits = credits > 0;
+  const hasCredits = credits >= 200;
+  const canAccessAdmin = isProAdmin(session.user.plan);
 
   return (
     <main className="min-h-screen bg-[hsl(222,47%,4%)] p-4 sm:p-6 lg:p-8 pt-24 text-slate-200">
@@ -55,6 +56,16 @@ export default async function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-4">
+            {canAccessAdmin ? (
+              <Link
+                href="/admin/promo"
+                className="inline-flex items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-4 h-8 font-medium text-sky-300 transition-colors hover:bg-sky-500/20"
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Admin Console
+              </Link>
+            ) : null}
+
             {/* Credit Badge */}
             <div className={`flex items-center px-4 py-2 rounded-xl border backdrop-blur-md ${
                 hasCredits 
@@ -70,26 +81,27 @@ export default async function DashboardPage() {
             </div>
 
             {!hasCredits ? (
-              <Button asChild className="bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20 px-6">
-                <Link href="/pricing">
-                  <Crown className="w-5 h-5 mr-2" />
-                  Upgrade Plan
-                </Link>
-              </Button>
+              <Link
+                href="/credits"
+                className="inline-flex items-center justify-center rounded-lg bg-amber-500 hover:bg-amber-400 text-white font-medium shadow-lg shadow-amber-500/20 px-6 h-8 transition-colors"
+              >
+                <Crown className="w-5 h-5 mr-2" />
+                Add Credits
+              </Link>
             ) : null}
           </div>
         </div>
 
-        {/* 0 Credits Alert */}
+        {/* Not enough Credits Alert */}
         {!hasCredits && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-4 text-amber-200">
             <Crown className="w-6 h-6 text-amber-500 shrink-0" />
             <div>
-              <h4 className="font-bold">You&apos;re out of credits!</h4>
+              <h4 className="font-bold">Insufficient credits!</h4>
               <p className="text-sm opacity-80 mt-1">
-                Upgrade your plan now to unlock more AI analyses, full PDF reports, and premium TPA dispute letters.{" "}
-                <Link href="/pricing" className="underline underline-offset-2 font-semibold hover:text-amber-100">
-                  View plans →
+                You need at least 200 credits to perform a new analysis. Top up your wallet to continue checking claims.{" "}
+                <Link href="/credits" className="underline underline-offset-2 font-semibold hover:text-amber-100">
+                  Open Wallet →
                 </Link>
               </p>
             </div>
