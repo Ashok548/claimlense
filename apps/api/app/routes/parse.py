@@ -3,7 +3,7 @@
 import json
 from typing import Sequence
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import asyncio
 import logging
 
@@ -65,7 +65,7 @@ from app.schemas import ParseRequest, ParseResponse, ParsedItem
 from app.services.ocr_service import extract_text
 from app.services.s3_service import download_file
 from app.services.gpt_service import gpt_client, settings as gpt_settings
-from app.dependencies import CurrentUser
+from app.dependencies.internal import verify_internal_request
 
 router = APIRouter(prefix="/v1/parse", tags=["parse"])
 
@@ -205,7 +205,10 @@ Return accurate, non-duplicated, billable items AND complete stay duration infor
 
 
 @router.post("/", response_model=ParseResponse)
-async def parse_bill(request: ParseRequest, _current_user: CurrentUser) -> ParseResponse:
+async def parse_bill(
+    request: ParseRequest,
+    _internal_auth: None = Depends(verify_internal_request),
+) -> ParseResponse:
     try:
         # 1. Download from R2 (run in thread because botocore is sync)
         file_bytes = await asyncio.to_thread(download_file, request.s3_key)

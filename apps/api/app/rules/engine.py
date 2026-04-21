@@ -399,40 +399,77 @@ def _build_action_items(
     summary: AnalysisSummary,
     effective_room_rent_limit: float | None,
 ) -> list[str]:
-    actions = []
+    actions: list[str] = []
 
+    # Prioritize concrete actions tied to high financial impact.
     if summary.total_at_risk > 0:
         actions.append(
-            f"⚠️ ₹{summary.total_at_risk:,.0f} is at risk of rejection "
-            f"({summary.rejection_rate_pct}% of your total bill)."
+            f"Resolve high-risk charges before discharge: ₹{summary.total_at_risk:,.0f} "
+            f"({summary.rejection_rate_pct}% of bill) is currently at risk."
         )
 
-    # Room rent exceeded
-    room_items = [i for i in items if i.category in ("ROOM_RENT_EXCESS",)]
+    room_items = [i for i in items if i.category == "ROOM_RENT_EXCESS"]
     if room_items and effective_room_rent_limit:
         actions.append(
-            f"🏨 Room rent exceeds your policy cap of ₹{effective_room_rent_limit:,.0f}/day. "
-            f"Request a room downgrade before discharge to prevent proportional deductions."
+            f"Room rent is above your cap of ₹{effective_room_rent_limit:,.0f}/day. "
+            f"Request downgrade or negotiated adjustment before final billing."
         )
 
-    # Consumables
-    consumable_items = [i for i in items if i.category == "CONSUMABLE" and i.status == PayabilityStatus.NOT_PAYABLE]
+    consumable_items = [
+        i for i in items
+        if i.category == "CONSUMABLE" and i.status == PayabilityStatus.NOT_PAYABLE
+    ]
     if consumable_items:
         total = sum(i.billed_amount for i in consumable_items)
         actions.append(
-            f"🧪 ₹{total:,.0f} in consumables are excluded. Ask the billing desk "
-            f"to bundle them into procedure/OT package charges."
+            f"Ask billing to reclassify/bundle ₹{total:,.0f} consumables into covered "
+            f"procedure or package heads where policy allows."
         )
 
-    # Items needing TPA verification
+    rejected_items = [i for i in items if i.status == PayabilityStatus.NOT_PAYABLE]
+    if rejected_items:
+        top_rejected = max(rejected_items, key=lambda i: i.billed_amount)
+        actions.append(
+            f"Escalate the largest rejected line item now: '{top_rejected.description}' "
+            f"(₹{top_rejected.billed_amount:,.0f}) with treating doctor note/supporting documents."
+        )
+
     verify_items = [i for i in items if i.status == PayabilityStatus.VERIFY_WITH_TPA]
     if verify_items:
         actions.append(
-            f"📞 {len(verify_items)} items need TPA verification before relying on them. "
-            f"Call your TPA helpline before discharge."
+            f"Call TPA before discharge for {len(verify_items)} pending item(s) and get "
+            f"pre-approval/clarification noted on file."
         )
 
-    if not actions:
-        actions.append("✅ Your bill appears clean. Proceed with the normal claim process.")
+    recovery_hints = [
+        i.recovery_action.strip()
+        for i in items
+        if i.recovery_action and i.recovery_action.strip()
+    ]
+    if recovery_hints:
+        actions.append(f"Follow this bill-specific recovery step before payment: {recovery_hints[0]}")
 
-    return actions
+    fallback_actions = [
+        "Verify final bill before discharge.",
+        "Ask hospital for itemized bill.",
+        "Confirm insurance coverage with your TPA/insurer.",
+    ]
+
+    # Deduplicate while preserving order.
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for action in actions:
+        if action not in seen:
+            deduped.append(action)
+            seen.add(action)
+
+    # Always return at least 3 practical actions.
+    for fallback in fallback_actions:
+        if len(deduped) >= 3:
+            break
+        if fallback not in seen:
+            deduped.append(fallback)
+            seen.add(fallback)
+
+    # Cap list for readability in UI/report.
+    return deduped[:6]

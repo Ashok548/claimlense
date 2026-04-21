@@ -11,7 +11,9 @@ export async function requireProApiUser() {
     return { error: "Unauthorized", status: 401 } as const;
   }
 
-  if (!isProAdmin(session.user.plan)) {
+  const userPlan = (session.user as typeof session.user & { plan?: string | null }).plan;
+
+  if (!isProAdmin(userPlan)) {
     return { error: "Forbidden", status: 403 } as const;
   }
 

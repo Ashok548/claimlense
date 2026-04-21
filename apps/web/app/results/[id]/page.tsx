@@ -14,6 +14,59 @@ type ActionItem = {
   instruction: string;
 };
 
+type RawActionObject = {
+  type?: string;
+  title?: string;
+  item_name?: string;
+  instruction?: string;
+  text?: string;
+  action?: string;
+  message?: string;
+};
+
+function normalizeActionItems(actionItems: unknown): ActionItem[] {
+  if (!Array.isArray(actionItems)) {
+    return [];
+  }
+
+  return actionItems
+    .map((item): ActionItem | null => {
+      if (typeof item === "string") {
+        const text = item.trim();
+        if (!text) {
+          return null;
+        }
+        return {
+          type: "Action Item",
+          instruction: text,
+        };
+      }
+
+      if (item && typeof item === "object") {
+        const raw = item as RawActionObject;
+        const instruction =
+          raw.instruction?.trim() ||
+          raw.text?.trim() ||
+          raw.action?.trim() ||
+          raw.message?.trim() ||
+          "";
+
+        if (!instruction) {
+          return null;
+        }
+
+        return {
+          type: raw.type?.trim() || raw.title?.trim() || "Action Item",
+          item_name: raw.item_name,
+          instruction,
+        };
+      }
+
+      return null;
+    })
+    .filter((item): item is ActionItem => item !== null);
+}
+
 export default async function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   // Validate UUID or whatever ID structure we have
   const resolvedParams = await params;
@@ -32,9 +85,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const actionItems = Array.isArray(analysis.action_items)
-    ? (analysis.action_items as ActionItem[])
-    : [];
+  const actionItems = normalizeActionItems(analysis.action_items);
   const createdAtLabel = analysis.created_at
     ? new Date(analysis.created_at).toLocaleDateString()
     : "Date unavailable";

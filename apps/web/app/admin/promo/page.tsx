@@ -15,7 +15,9 @@ export default async function AdminPromoPage() {
     redirect("/login?callbackUrl=/admin/promo");
   }
 
-  if (!isProAdmin(session.user.plan)) {
+  const userPlan = (session.user as typeof session.user & { plan?: string | null }).plan;
+
+  if (!isProAdmin(userPlan)) {
     redirect("/dashboard");
   }
 
