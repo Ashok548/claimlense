@@ -48,48 +48,48 @@ export default async function CreditsPage() {
   const hasEnough = credits >= 200;
 
   return (
-    <main className="min-h-screen bg-[hsl(222,47%,4%)] p-4 sm:p-6 lg:p-8 pt-24 text-slate-200">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <main className="app-shell text-slate-200">
+      <div className="app-container space-y-5 sm:space-y-6">
         <BackButton />
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              <Coins className="w-8 h-8 text-sky-400" />
+            <h1 className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <Coins className="h-5 w-5 text-sky-400 sm:h-6 sm:w-6" />
               Credits Wallet
             </h1>
-            <p className="text-slate-400 mt-1">Manage your balance and top up for more claim analyses.</p>
+            <p className="mt-1 text-sm text-slate-400">Manage your balance and top up for more claim analyses.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           
           {/* Balance Card */}
-          <div className="glass rounded-2xl p-6 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Coins className="w-32 h-32 text-sky-500" />
+          <div className="glass relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/10 p-5 shadow-2xl">
+            <div className="absolute right-0 top-0 p-6 opacity-10">
+              <Coins className="h-24 w-24 text-sky-500" />
             </div>
             
             <div className="relative z-10">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">Current Balance</h2>
-              <div className="flex items-end gap-3 mb-4">
-                <span className={`text-6xl font-bold tracking-tighter ${hasEnough ? "text-white" : "text-amber-400"}`}>
+              <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Current Balance</h2>
+              <div className="mb-3 flex items-end gap-2">
+                <span className={`text-2xl font-bold tracking-tighter sm:text-3xl ${hasEnough ? "text-white" : "text-amber-400"}`}>
                   {credits}
                 </span>
-                <span className="text-xl text-slate-500 mb-2">credits</span>
+                <span className="mb-0.5 text-base text-slate-500 sm:text-lg">credits</span>
               </div>
               
-              <div className={`text-sm font-medium px-3 py-1.5 rounded-full inline-flex items-center ${
+              <div className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium sm:text-sm ${
                 hasEnough ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
               }`}>
                 {hasEnough ? (
                   <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                     Sufficient for new analysis (200 req)
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-4 h-4 mr-2" />
+                    <XCircle className="mr-1.5 h-3.5 w-3.5" />
                     Insufficient. Top up 200 to analyze.
                   </>
                 )}
@@ -98,20 +98,20 @@ export default async function CreditsPage() {
           </div>
 
           {/* Action Cards */}
-          <div className="space-y-6 flex flex-col">
+          <div className="flex flex-col space-y-5">
             
-            <div className="glass rounded-2xl p-6 border border-white/10 shadow-lg flex-1">
-              <h3 className="text-white font-semibold flex items-center gap-2 mb-4">
+            <div className="glass flex-1 rounded-xl border border-white/10 p-5 shadow-lg">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white sm:text-base">
                 Add Credits
               </h3>
               <RazorpayCheckout userName={userName} userEmail={userEmail} />
-              <p className="text-xs text-slate-500 mt-4 text-center">
+              <p className="mt-3 text-center text-xs text-slate-500">
                 Secure payment powered by Razorpay. 
               </p>
             </div>
 
-            <div className="glass rounded-2xl p-6 border border-white/10 shadow-lg">
-              <h3 className="text-white font-semibold flex items-center gap-2 mb-4">
+            <div className="glass rounded-xl border border-white/10 p-5 shadow-lg">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white sm:text-base">
                 Redeem Promo
               </h3>
               <PromoCodeRedeemer />
@@ -121,44 +121,44 @@ export default async function CreditsPage() {
         </div>
 
         {/* Transaction History */}
-        <div className="glass rounded-2xl border border-white/10 shadow-xl overflow-hidden mt-12">
-          <div className="p-6 border-b border-white/10 flex items-center gap-3 bg-white/5">
-            <History className="w-5 h-5 text-slate-400" />
-            <h3 className="font-semibold text-white">Payment History</h3>
+        <div className="glass mt-8 overflow-hidden rounded-xl border border-white/10 shadow-xl">
+          <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 p-5">
+            <History className="h-4 w-4 text-slate-400 sm:h-5 sm:w-5" />
+            <h3 className="text-sm font-semibold text-white sm:text-base">Payment History</h3>
           </div>
           
           <div className="p-0">
             {payments.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
-                <FileText className="w-8 h-8 opacity-20 mx-auto mb-3" />
+              <div className="p-6 text-center text-slate-500">
+                <FileText className="mx-auto mb-2 h-7 w-7 opacity-20" />
                 No transactions found.
               </div>
             ) : (
               <div className="divide-y divide-white/5">
                 {payments.map((payment) => (
-                  <div key={payment.id} className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-xl border ${
+                  <div key={payment.id} className="flex flex-col items-start justify-between gap-3 p-3 transition-colors hover:bg-white/5 sm:flex-row sm:items-center sm:p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`rounded-lg border p-2.5 ${
                         payment.status === "SUCCESS" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
                         payment.status === "PENDING" ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
                         "bg-red-500/10 border-red-500/20 text-red-400"
                       }`}>
-                        {payment.status === "SUCCESS" ? <CheckCircle2 className="w-5 h-5" /> :
-                         payment.status === "PENDING" ? <Clock className="w-5 h-5" /> :
-                         <XCircle className="w-5 h-5" />}
+                        {payment.status === "SUCCESS" ? <CheckCircle2 className="h-4 w-4" /> :
+                         payment.status === "PENDING" ? <Clock className="h-4 w-4" /> :
+                         <XCircle className="h-4 w-4" />}
                       </div>
                       <div>
-                        <p className="font-semibold text-white">
+                        <p className="text-sm font-semibold text-white sm:text-base">
                           +200 credits &mdash; ₹{(payment.amountPaise / 100).toFixed(2)} Top-up
                         </p>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="mt-1 text-xs text-slate-400 sm:text-sm">
                           {payment.createdAt.toLocaleDateString("en-IN", { 
                             day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" 
                           })}
                         </p>
                       </div>
                     </div>
-                    <span className={`text-sm font-medium ${
+                    <span className={`text-xs font-medium sm:text-sm ${
                       payment.status === "SUCCESS" ? "text-emerald-400" :
                       payment.status === "PENDING" ? "text-amber-400" :
                       "text-red-400"
@@ -174,33 +174,33 @@ export default async function CreditsPage() {
 
         {/* Credit Deductions — analysis history */}
         {reports.length > 0 && (
-          <div className="glass rounded-2xl border border-white/10 shadow-xl overflow-hidden mt-6">
-            <div className="p-6 border-b border-white/10 flex items-center gap-3 bg-white/5">
-              <XCircle className="w-5 h-5 text-slate-400" />
-              <h3 className="font-semibold text-white">Credit Usage (Analyses)</h3>
+          <div className="glass mt-5 overflow-hidden rounded-xl border border-white/10 shadow-xl">
+            <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 p-5">
+              <XCircle className="h-4 w-4 text-slate-400 sm:h-5 sm:w-5" />
+              <h3 className="text-sm font-semibold text-white sm:text-base">Credit Usage (Analyses)</h3>
             </div>
             <div className="divide-y divide-white/5">
               {reports.map((report) => (
-                <div key={report.id} className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl border bg-red-500/10 border-red-400/20 text-red-400">
-                      <XCircle className="w-5 h-5" />
+                <div key={report.id} className="flex flex-col items-start justify-between gap-3 p-3 transition-colors hover:bg-white/5 sm:flex-row sm:items-center sm:p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg border border-red-400/20 bg-red-500/10 p-2.5 text-red-400">
+                      <XCircle className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="font-semibold text-white">
+                      <p className="text-sm font-semibold text-white sm:text-base">
                         &minus;200 credits &mdash; {report.insurerName} analysis
                       </p>
                       {report.diagnosis && (
-                        <p className="text-xs text-slate-500 mt-0.5">{report.diagnosis}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{report.diagnosis}</p>
                       )}
-                      <p className="text-sm text-slate-400 mt-1">
+                      <p className="mt-1 text-xs text-slate-400 sm:text-sm">
                         {report.createdAt.toLocaleDateString("en-IN", { 
                           day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
                         })}
                       </p>
                     </div>
                   </div>
-                  <span className="text-sm font-medium text-red-400">DEDUCTED</span>
+                  <span className="text-xs font-medium text-red-400 sm:text-sm">DEDUCTED</span>
                 </div>
               ))}
             </div>

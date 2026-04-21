@@ -105,19 +105,19 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
 
   if (uploading || parsing) {
     return (
-      <div className="border-2 border-dashed border-sky-500/50 rounded-2xl p-12 text-center bg-sky-500/5 flex flex-col items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-sky-400 mb-4" />
-        <h3 className="text-xl font-bold text-white mb-2">
+      <div className="border-2 border-dashed border-sky-500/50 rounded-2xl p-6 text-center bg-sky-500/5 flex flex-col items-center justify-center sm:p-8">
+        <Loader2 className="mb-4 h-10 w-10 animate-spin text-sky-400 sm:h-12 sm:w-12" />
+        <h3 className="text-lg font-bold text-white mb-2 sm:text-xl">
           {uploading ? "Uploading Bill..." : "AI is extracting items..."}
         </h3>
         <p className="text-slate-400 max-w-sm mb-6">
           {uploading
             ? "Securely transferring your file to our processing servers."
-            : "Running OCR and GPT-4o Vision to structure your hospital bill. This may take up to 20 seconds."}
+            : "Running OCR and  Vision to structure your hospital bill. This may take up to 20 seconds."}
         </p>
 
         {uploading && (
-          <div className="w-64 h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-2 w-full max-w-xs bg-slate-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-sky-500 transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -132,7 +132,7 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
     <>
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-colors ${isDragReject
+      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors sm:p-10 ${isDragReject
           ? "border-red-500/50 bg-red-500/5"
           : isDragActive
             ? "border-sky-500 bg-sky-500/10"
@@ -142,12 +142,12 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
       <input {...getInputProps()} />
 
       <div className="flex justify-center mb-4">
-        <div className="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center">
-          <UploadCloud className="w-8 h-8 text-sky-400" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500/20 sm:h-16 sm:w-16">
+          <UploadCloud className="h-6 w-6 text-sky-400 sm:h-8 sm:w-8" />
         </div>
       </div>
 
-      <h3 className="text-xl font-bold text-white mb-2">
+      <h3 className="text-lg font-bold text-white mb-2 sm:text-xl">
         Drag & Drop your Hospital Bill
       </h3>
       <p className="text-slate-400 mb-6">
@@ -159,7 +159,7 @@ export function UploadZone({ onItemsParsed, onStayDetected, onError }: Props) {
         Browse Files
       </Button>
 
-      <div className="mt-8 flex items-center justify-center gap-2 text-sm text-sky-400 bg-sky-500/10 inline-flex px-3 py-1.5 rounded-full mx-auto">
+      <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-sky-500/10 px-3 py-1.5 text-sm text-sky-400">
         <Sparkles className="w-4 h-4" />
         <span>Our AI will automatically extract all line items</span>
       </div>

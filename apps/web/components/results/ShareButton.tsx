@@ -34,7 +34,7 @@ export function ShareButton({ analysisId, insurerName }: Props) {
   return (
     <Button
       onClick={handleShare}
-      className="flex-1 sm:flex-none bg-sky-500 hover:bg-sky-400 text-white"
+      className="h-9 w-full bg-sky-500 px-4 text-sm text-white hover:bg-sky-400 sm:w-auto"
     >
       {copied ? (
         <>

@@ -46,7 +46,7 @@ export function PlanSelector({ insurerId, selectedPlanCode, onSelect, onPlanChan
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
+      <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
       </div>
     );
@@ -62,7 +62,7 @@ export function PlanSelector({ insurerId, selectedPlanCode, onSelect, onPlanChan
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {plans.map((plan) => (
           <Card
             key={plan.code}
@@ -74,7 +74,7 @@ export function PlanSelector({ insurerId, selectedPlanCode, onSelect, onPlanChan
             onClick={() => onSelect(plan.code)}
           >
             <CardContent className="p-5 flex flex-col h-full">
-              <h3 className="text-lg font-medium text-white mb-3">{plan.name}</h3>
+              <h3 className="text-base font-medium text-white mb-3 sm:text-lg">{plan.name}</h3>
               
               <div className="space-y-2 text-sm text-slate-300 flex-grow">
                 <div className="flex justify-between border-b border-white/5 pb-1">

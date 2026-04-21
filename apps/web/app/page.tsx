@@ -123,7 +123,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[hsl(222,47%,4%)] overflow-hidden">
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 relative">
+      <section className="pt-24 pb-16 px-5 relative">
         {/* Background glow */}
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -137,12 +137,12 @@ export default function LandingPage() {
               🇮🇳 Built for Indian Health Insurance
             </Badge>
 
-            <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-4">
               Know What Your Insurance{" "}
               <span className="gradient-text">Will Actually Pay</span>
             </h1>
 
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-md text-slate-400 max-w-2xl mx-auto mb-6 leading-relaxed">
               Upload your hospital bill. Our AI + IRDAI rule engine predicts which items
               will be rejected — before you sign the discharge papers. Save ₹5,000–₹50,000.
             </p>
@@ -152,7 +152,7 @@ export default function LandingPage() {
                 size="lg"
                 onClick={handleStartAnalysis}
                 disabled={isChecking}
-                className="bg-sky-500 hover:bg-sky-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-sky-500/25 transition-all hover:shadow-sky-500/40 hover:scale-105"
+                className="inline-flex items-center justify-center bg-sky-500 hover:bg-sky-400 text-white font-semibold px-5 py-3 text-sm md:text-base rounded-lg shadow-md transition-all hover:shadow-sky-500/30 hover:scale-105"
               >
                 {isChecking ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Zap className="w-5 h-5 mr-2" />}
                 Analyze My Bill
@@ -160,7 +160,7 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white/10 text-slate-300 hover:bg-white/5 px-8 py-6 text-lg rounded-xl"
+                className="border border-white/10 text-slate-300 hover:bg-white/5 px-5 py-3 text-sm md:text-base rounded-lg"
               >
                 <FileSearch className="w-5 h-5 mr-2" />
                 See Example Report
@@ -171,7 +171,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats */}
-      <section className="py-12 px-6">
+      <section className="py-10 px-5">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
           {STATS.map((stat, i) => (
             <motion.div
@@ -181,7 +181,7 @@ export default function LandingPage() {
               transition={{ delay: i * 0.1 }}
               className="glass rounded-xl p-5 text-center"
             >
-              <div className="text-2xl font-bold text-sky-400 mb-1">{stat.value}</div>
+              <div className="text-xl font-bold text-sky-400 mb-1">{stat.value}</div>
               <div className="text-sm text-slate-500">{stat.label}</div>
             </motion.div>
           ))}
@@ -189,10 +189,10 @@ export default function LandingPage() {
       </section>
 
       {/* Example Bill Analysis Preview */}
-      <section id="example" className="py-16 px-6 scroll-mt-24">
+      <section id="example" className="py-12 px-5 scroll-mt-24">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">See It In Action</h2>
+            <h2 className="text-xl font-bold text-white mb-2">See It In Action</h2>
             <p className="text-slate-400">
               Real analysis output for a Star Health claim (Appendicitis, Itemized billing)
             </p>
@@ -203,15 +203,15 @@ export default function LandingPage() {
             <div className="flex items-center justify-between py-3 border-b border-white/5 mb-4">
               <div>
                 <span className="text-slate-400 text-sm">Total Billed</span>
-                <div className="text-white font-bold text-xl">₹49,850</div>
+                <div className="text-white font-bold text-lg">₹49,850</div>
               </div>
               <div>
                 <span className="text-slate-400 text-sm">Payable</span>
-                <div className="text-green-400 font-bold text-xl">₹41,000</div>
+                <div className="text-green-400 font-bold text-lg">₹41,000</div>
               </div>
               <div>
                 <span className="text-slate-400 text-sm">At Risk</span>
-                <div className="text-red-400 font-bold text-xl">₹8,850</div>
+                <div className="text-red-400 font-bold text-lg">₹8,850</div>
               </div>
             </div>
 
@@ -248,13 +248,13 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-16 px-6">
+      <section className="py-12 px-5">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">How It Works</h2>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-white mb-3">How It Works</h2>
             <p className="text-slate-400">From hospital bill to actionable advice in under 30 seconds</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4">
             {HOW_IT_WORKS.map((step, i) => (
               <motion.div
                 key={step.step}
@@ -262,9 +262,9 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 viewport={{ once: true }}
-                className="glass rounded-xl p-6 flex gap-4"
+                className="glass rounded-xl p-5 flex gap-4"
               >
-                <div className="text-4xl font-black text-sky-500/20 leading-none">{step.step}</div>
+                <div className="text-3xl font-black text-sky-500/20 leading-none">{step.step}</div>
                 <div>
                   <h3 className="text-white font-semibold mb-1">{step.title}</h3>
                   <p className="text-slate-400 text-sm">{step.desc}</p>
@@ -276,10 +276,10 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-6 text-center">
+      <section className="py-16 px-5 text-center">
         <div className="max-w-xl mx-auto">
           <TrendingDown className="w-12 h-12 text-sky-400 mx-auto mb-4" />
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className="text-2xl font-bold text-white mb-4">
             Don&apos;t Lose Money on a Preventable Rejection
           </h2>
           <p className="text-slate-400 mb-8">
@@ -298,7 +298,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-white/5 text-center">
+      <footer className="py-6 px-5 border-t border-white/5 text-center">
         <p className="text-slate-600 text-sm">
           © 2026 ClaimSmart · Not a TPA or insurance intermediary ·
           Analysis based on IRDAI guidelines · Not legal advice

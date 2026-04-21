@@ -103,24 +103,24 @@ export function RazorpayCheckout({ userName, userEmail }: { userName?: string; u
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex h-full flex-col gap-2">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
       <Button 
         onClick={startCheckout} 
         disabled={loading}
-        className="w-full bg-sky-500 hover:bg-sky-400 text-white font-bold py-6 text-lg shadow-lg shadow-sky-500/20"
+        className="w-full bg-sky-500 py-5 text-base font-semibold text-white shadow-lg shadow-sky-500/20 hover:bg-sky-400"
       >
         {loading ? (
-          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
         ) : (
-          <Coins className="w-6 h-6 mr-2" />
+          <Coins className="mr-2 h-5 w-5" />
         )}
         Add 200 Credits (₹200)
       </Button>
 
       {error && (
-        <p className="text-sm text-red-400 font-medium text-center bg-red-500/10 p-2 rounded border border-red-500/20">
+        <p className="rounded border border-red-500/20 bg-red-500/10 p-1.5 text-center text-xs font-medium text-red-400 sm:text-sm">
           {error}
         </p>
       )}

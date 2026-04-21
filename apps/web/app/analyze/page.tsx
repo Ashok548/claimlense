@@ -140,25 +140,25 @@ export default function AnalyzeWizard() {
 
       const data = await res.json();
       router.push(`/results/${data.analysis_id}`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to analyze claim");
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(222,47%,4%)] text-white pt-5 pb-12 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="app-shell text-white">
+      <div className="mx-auto max-w-5xl">
         <BackButton />
         {/* Header */}
-        <div className="flex items-center gap-2 mb-8">
-          <ShieldCheck className="w-8 h-8 text-sky-400" />
-          <h1 className="text-3xl font-bold">New Bill Analysis</h1>
+        <div className="mb-6 flex items-center gap-2 sm:mb-8">
+          <ShieldCheck className="h-6 w-6 text-sky-400 sm:h-7 sm:w-7" />
+          <h1 className="text-2xl font-bold sm:text-3xl">New Bill Analysis</h1>
         </div>
 
         {/* Credit gate: loading spinner while we verify credits */}
         {!creditsChecked && (
-          <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+          <div className="flex items-center justify-center py-12 gap-3 text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin" />
             <span>Verifying account...</span>
           </div>
@@ -166,15 +166,15 @@ export default function AnalyzeWizard() {
 
         {/* Blocked state: not enough credits */}
         {creditsChecked && insufficientCredits && (
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-8 text-center">
-            <Coins className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 text-center sm:p-6">
+            <Coins className="w-10 h-10 text-amber-400 mx-auto mb-3" />
             <h2 className="text-xl font-bold text-white mb-2">Insufficient Credits</h2>
             <p className="text-slate-400 mb-6">
               You need at least <strong className="text-white">200 credits</strong> to run an analysis. Top up your wallet to continue.
             </p>
             <Link
               href="/credits"
-              className="inline-flex items-center justify-center rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-medium px-8 h-8 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-medium px-6 h-9 transition-colors"
             >
               Open Credits Wallet →
             </Link>
@@ -184,24 +184,44 @@ export default function AnalyzeWizard() {
         {/* Main wizard — only shown when credits are OK */}
         {creditsChecked && !insufficientCredits && (
           <>
-        {/* Stepper */}
-        <div className="flex items-center justify-between mb-8 overflow-x-auto pb-4">
+        {/* Stepper — mobile: compact progress bar; sm+: full labelled row */}
+
+        {/* Mobile stepper (< sm) */}
+        <div className="mb-6 sm:hidden">
+          <div className="mb-2 flex items-center gap-1">
+            {STEPS.map((_, idx) => (
+              <div
+                key={idx}
+                className={`h-1 flex-1 rounded-full transition-colors ${
+                  step > idx ? "bg-sky-500" : step === idx ? "bg-sky-400" : "bg-slate-700"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-slate-400">
+            Step <span className="font-semibold text-white">{step + 1}</span> of {STEPS.length}
+            <span className="ml-1.5 font-medium text-sky-400">— {STEPS[step]}</span>
+          </p>
+        </div>
+
+        {/* Desktop stepper (≥ sm) */}
+        <div className="mb-8 hidden items-center justify-between pb-4 sm:flex">
           {STEPS.map((label, idx) => (
             <div key={label} className="flex items-center">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-colors ${
-                step > idx ? "bg-sky-500 text-white" : 
-                step === idx ? "bg-sky-500 ring-4 ring-sky-500/20 text-white" : 
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+                step > idx ? "bg-sky-500 text-white" :
+                step === idx ? "bg-sky-500 ring-4 ring-sky-500/20 text-white" :
                 "bg-slate-800 text-slate-500"
               }`}>
                 {step > idx ? "✓" : idx + 1}
               </div>
-              <span className={`ml-3 mr-6 font-medium whitespace-nowrap ${
+              <span className={`ml-3 mr-6 text-sm font-medium ${
                 step >= idx ? "text-white" : "text-slate-500"
               }`}>
                 {label}
               </span>
               {idx < STEPS.length - 1 && (
-                <div className="h-px w-12 bg-white/10 hidden sm:block mr-6" />
+                <div className="mr-6 h-px w-12 bg-white/10" />
               )}
             </div>
           ))}
@@ -216,7 +236,7 @@ export default function AnalyzeWizard() {
         )}
 
         {/* Step Content */}
-        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-6 sm:p-8 mb-8 min-h-[400px]">
+        <div className="mb-8 min-h-[360px] rounded-2xl border border-white/5 bg-slate-900/40 p-4 sm:min-h-[400px] sm:p-6 lg:p-8">
           {step === 0 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <h2 className="text-xl font-semibold mb-6">Select Your Health Insurance Provider</h2>
@@ -383,7 +403,7 @@ export default function AnalyzeWizard() {
           {step < STEPS.length - 1 ? (
             <Button
               onClick={nextStep}
-              className="bg-sky-500 hover:bg-sky-400 text-white px-8"
+              className="bg-sky-500 hover:bg-sky-400 text-white px-6"
             >
               Continue
               <ChevronRight className="w-5 h-5 ml-1" />
@@ -392,7 +412,7 @@ export default function AnalyzeWizard() {
             <Button
               onClick={submitAnalysis}
               disabled={loading || billItems.length === 0}
-              className="bg-green-500 hover:bg-green-400 text-white px-8 shadow-lg shadow-green-500/20"
+              className="bg-green-500 hover:bg-green-400 text-white px-6 shadow-lg shadow-green-500/20"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />

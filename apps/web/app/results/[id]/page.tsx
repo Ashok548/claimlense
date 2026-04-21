@@ -98,22 +98,22 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
   const rejectionPct = Number(analysis.rejection_rate_pct) || 0;
 
   return (
-    <main className="min-h-screen bg-[hsl(222,47%,4%)] p-4 sm:p-6 lg:p-8 pt-24">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <main className="app-shell">
+      <div className="app-container space-y-5 sm:space-y-6">
         <BackButton fallbackHref="/reports" />
         {/* Header Options */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
-          <div>
-             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-               <ShieldCheck className="w-8 h-8 text-sky-400" />
+        <div className="flex flex-col items-start justify-between gap-4 border-b border-white/5 pb-4 sm:flex-row sm:items-center sm:pb-5">
+          <div className="min-w-0">
+             <h1 className="flex items-center gap-3 text-xl font-bold text-white sm:text-2xl">
+               <ShieldCheck className="h-6 w-6 text-sky-400 sm:h-7 sm:w-7" />
                Analysis Results
              </h1>
-             <p className="text-slate-400 mt-2">
+             <p className="mt-2 text-xs text-slate-400 sm:text-sm">
                {analysis.insurers.name} • {analysis.diagnosis || "General Admission"} • {createdAtLabel}
              </p>
           </div>
           
-          <div className="flex gap-3 w-full sm:w-auto items-start">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-start">
             {/* Phase 3 hook */}
             <DownloadReportButton analysisId={analysisId} />
             <ShareButton analysisId={analysisId} insurerName={analysis.insurers.name} />
@@ -134,7 +134,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
 
         {/* Line Items Breakdown */}
         <div>
-          <h2 className="text-xl font-bold text-white mb-4">Detailed Breakdown</h2>
+          <h2 className="mb-3 text-base font-bold text-white sm:text-lg">Detailed Breakdown</h2>
           <ResultsTable items={analysis.bill_line_items.map(item => ({
             ...item,
             billed_amount: Number(item.billed_amount),
@@ -144,7 +144,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Info Banner */}
-        <div className="bg-sky-500/5 border border-sky-500/10 rounded-xl p-4 text-sm text-slate-400 text-center">
+        <div className="rounded-xl border border-sky-500/10 bg-sky-500/5 p-3 text-center text-sm text-slate-400 sm:p-4">
           This analysis is based on IRDAI guidelines and known insurer behaviors. It is not a guarantee of claim settlement. 
           Final decisions rest with the TPA and Insurer.
         </div>

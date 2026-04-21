@@ -23,7 +23,7 @@ interface Props {
 export function ReportHistoryTable({ reports }: Props) {
   if (reports.length === 0) {
     return (
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center">
+      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 text-center flex flex-col items-center sm:p-10sm:p-10">
         <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
           <CopyX className="w-8 h-8 text-slate-500" />
         </div>
@@ -42,7 +42,45 @@ export function ReportHistoryTable({ reports }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-white/10 glass">
+    <div className="rounded-xl border border-white/10 glass">
+      <div className="space-y-3 p-3 md:hidden">
+        {reports.map((r) => (
+          <div key={r.id} className="rounded-xl border border-white/5 bg-slate-900/50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">{r.insurerName}</p>
+                <p className="mt-1 text-xs text-slate-400">{format(new Date(r.createdAt), "dd MMM yyyy")}</p>
+              </div>
+              <Link
+                href={`/results/${r.analysisId}`}
+                className="inline-flex shrink-0 items-center text-sm text-sky-400 hover:text-sky-300"
+              >
+                View <ExternalLink className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Diagnosis</p>
+                <p className="mt-1 break-words text-slate-300">{r.diagnosis || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Billed</p>
+                <p className="mt-1 text-slate-300">₹{formatCurrency(r.totalBilled)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">At Risk</p>
+                <p className="mt-1 font-medium text-red-400">₹{formatCurrency(r.totalAtRisk)}</p>
+              </div>
+              <div className="flex items-end justify-end">
+                <DownloadReportButton analysisId={r.analysisId} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
       <table className="w-full text-left text-sm whitespace-nowrap">
         <thead className="bg-white/5 text-slate-300 border-b border-white/10 uppercase text-xs tracking-wider">
           <tr>
@@ -64,7 +102,7 @@ export function ReportHistoryTable({ reports }: Props) {
               <td className="px-6 py-4 font-medium text-white">
                 {r.insurerName}
               </td>
-              <td className="px-6 py-4 text-slate-400 truncate max-w-[200px]">
+              <td className="px-6 py-4 text-slate-400 truncate max-w-[200px]" title={r.diagnosis || "N/A"}>
                 {r.diagnosis || "N/A"}
               </td>
               <td className="px-6 py-4 text-right text-slate-300">
@@ -74,7 +112,7 @@ export function ReportHistoryTable({ reports }: Props) {
                 ₹{formatCurrency(r.totalAtRisk)}
               </td>
               <td className="px-6 py-4">
-                <div className="flex justify-center scale-90">
+                <div className="flex justify-center">
                    {/* Reusing existing PDF button */}
                    <DownloadReportButton analysisId={r.analysisId} />
                 </div>
@@ -91,6 +129,7 @@ export function ReportHistoryTable({ reports }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

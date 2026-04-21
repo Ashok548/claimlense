@@ -45,8 +45,8 @@ export function BillEntryTable({ items, onChange }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-white/10 glass overflow-hidden">
-        <Table>
+      <div className="overflow-x-auto rounded-md border border-white/10 glass">
+        <Table className="min-w-[480px]">
           <TableHeader className="bg-white/5 border-b border-white/10">
             <TableRow>
               <TableHead className="text-slate-300 w-2/3">Item Description</TableHead>
@@ -130,7 +130,7 @@ export function BillEntryTable({ items, onChange }: Props) {
     </div>
 
       <div className="flex justify-end pt-2">
-        <div className="text-xl font-medium text-white">
+        <div className="text-base font-medium text-white sm:text-lg">
           Total Billed: <span className="font-bold ml-2">₹{total.toLocaleString()}</span>
         </div>
       </div>

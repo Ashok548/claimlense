@@ -25,7 +25,7 @@ def generate_analysis_pdf(analysis_data: dict, line_items: list[dict]) -> bytes:
     normal_style = styles["Normal"]
 
     # Header
-    elements.append(Paragraph(f"ClaimSmart Analysis Report", title_style))
+    elements.append(Paragraph(f"ClaimLense Analysis Report", title_style))
     elements.append(Paragraph(f"<b>Insurer:</b> {analysis_data.get('insurer_name', 'N/A')}", normal_style))
     elements.append(Paragraph(f"<b>Diagnosis:</b> {analysis_data.get('diagnosis', 'General Admission')}", normal_style))
     elements.append(Paragraph(f"<b>Generated At:</b> {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))

@@ -30,7 +30,7 @@ export function InsurerSelector({ selectedInsurerId, onSelect }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
+      <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
       </div>
     );
@@ -51,7 +51,7 @@ export function InsurerSelector({ selectedInsurerId, onSelect }: Props) {
           >
             <CardContent className="p-4 flex flex-col h-full justify-between">
               <div>
-                <h3 className="text-lg font-medium text-white mb-1">{insurer.name}</h3>
+                <h3 className="text-base font-medium text-white mb-1 sm:text-lg">{insurer.name}</h3>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {insurer.plans && insurer.plans.length > 0 && (

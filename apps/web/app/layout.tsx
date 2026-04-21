@@ -40,7 +40,9 @@ export default async function RootLayout({
             userName={session?.user?.name ?? session?.user?.email}
             credits={credits}
           />
-          {children}
+          <main className="max-w-6xl mx-auto px-4 w-full flex-1 flex flex-col">
+            {children}
+          </main>
         </TooltipProvider>
       </body>
     </html>

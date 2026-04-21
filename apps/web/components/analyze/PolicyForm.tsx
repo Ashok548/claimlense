@@ -25,7 +25,7 @@ export function PolicyForm({ sumInsured, policyType, hospitalType, billingMode, 
   return (
     <Card className="glass border-white/10">
       <CardHeader>
-        <CardTitle className="text-white text-lg">Policy Details</CardTitle>
+        <CardTitle className="text-base text-white sm:text-lg">Policy Details</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         
@@ -61,7 +61,7 @@ export function PolicyForm({ sumInsured, policyType, hospitalType, billingMode, 
           </div>
        
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+        <div className="grid grid-cols-1 gap-6 border-t border-white/5 pt-4 sm:grid-cols-2 md:grid-cols-3">
           <div className="space-y-2">
             <Label className="text-white">Policy Type</Label>
             <Select 

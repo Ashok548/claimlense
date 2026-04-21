@@ -45,12 +45,12 @@ export function DownloadReportButton({ analysisId }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex w-full flex-col items-stretch sm:w-auto sm:items-center">
       <Button 
         variant="outline" 
         onClick={handleDownload}
         disabled={loading}
-        className="border-white/10 text-slate-300 hover:text-white glass"
+        className="h-9 w-full border-white/10 px-3 text-sm text-slate-300 hover:text-white glass sm:w-auto"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />

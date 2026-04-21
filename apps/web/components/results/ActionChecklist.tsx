@@ -33,35 +33,35 @@ export function ActionChecklist({ actionItems }: Props) {
 
   return (
     <Card className="glass border-sky-500/30 shadow-lg shadow-sky-500/5">
-      <CardHeader className="bg-sky-500/10 cursor-pointer flex flex-row items-center justify-between" onClick={() => setExpanded(!expanded)}>
+      <CardHeader className="flex cursor-pointer flex-row items-center justify-between gap-3 bg-sky-500/10 px-4 py-4 sm:px-5" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-2">
-          <ListTodo className="w-5 h-5 text-sky-400" />
-          <CardTitle className="text-lg text-white">Pre-Discharge Action Checklist</CardTitle>
+          <ListTodo className="h-5 w-5 text-sky-400" />
+          <CardTitle className="text-base text-white sm:text-lg">Pre-Discharge Action Checklist</CardTitle>
         </div>
-        <Button variant="ghost" size="icon" className="text-sky-400 hover:text-sky-300 hover:bg-sky-400/20">
-          <ChevronDown className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-sky-400 hover:bg-sky-400/20 hover:text-sky-300">
+          <ChevronDown className={`h-5 w-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </Button>
       </CardHeader>
       
       {expanded && (
-        <CardContent className="p-6">
-          <p className="text-sm text-slate-300 mb-6">
+        <CardContent className="p-4 sm:p-5">
+          <p className="mb-4 text-sm leading-6 text-slate-300">
             Complete these recommended actions with the hospital billing department <strong>before</strong> signing the final discharge summary to minimize out-of-pocket expenses.
           </p>
           
-          <ul className="space-y-4">
+          <ul className="space-y-1 sm:space-y-2">
             {actionItems.map((action, idx) => (
-              <li key={idx} className="flex gap-4 p-4 rounded-lg bg-slate-900/50 border border-white/5">
-                <div className="flex-shrink-0 mt-0.5">
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 font-bold text-xs ring-1 ring-sky-500/30">
+              <li key={idx} className="flex items-start gap-2 sm:gap-3 rounded-lg border border-white/5 bg-slate-900/50 p-2.5 sm:p-3 !mb-0">
+                <div className="mt-0.5 flex-shrink-0">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-400 ring-1 ring-sky-500/30">
                     {idx + 1}
                   </div>
                 </div>
-                <div>
-                  <h4 className="text-white font-medium capitalize mb-1">
+                <div className="min-w-0 flex-1">
+                  <h4 className="mb-1 text-sm font-medium capitalize text-white sm:text-base">
                     {(action.type || 'Action Item').replace(/_/g, ' ')}
                   </h4>
-                  <p className="text-slate-400 text-sm">{action.instruction}</p>
+                  <p className="text-sm leading-6 break-words text-slate-400">{action.instruction}</p>
                 </div>
               </li>
             ))}

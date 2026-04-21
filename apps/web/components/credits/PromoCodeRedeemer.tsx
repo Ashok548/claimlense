@@ -44,31 +44,31 @@ export function PromoCodeRedeemer() {
   };
 
   return (
-    <form onSubmit={handleRedeem} className="flex flex-col gap-3 h-full">
+    <form onSubmit={handleRedeem} className="flex h-full flex-col gap-2">
       <div className="flex gap-2">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Ticket className="h-5 w-5 text-slate-500" />
+            <Ticket className="h-4 w-4 text-slate-500" />
           </div>
           <Input 
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Enter promo code"
-            className="pl-10 bg-slate-900/50 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+            className="bg-slate-900/50 pl-9 text-sm text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
             disabled={loading}
           />
         </div>
         <Button 
           type="submit" 
           disabled={loading || !code.trim()}
-          className="bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20"
+          className="h-9 bg-emerald-500 px-3 text-sm text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
         </Button>
       </div>
 
       {message && (
-        <p className={`text-sm font-medium p-2 rounded border ${
+        <p className={`rounded border p-1.5 text-xs font-medium sm:text-sm ${
           message.type === "success" 
             ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" 
             : "text-red-400 bg-red-500/10 border-red-500/20"

@@ -37,29 +37,29 @@ export default async function ReportsPage() {
 	const canAccessAdmin = isProAdmin(dbUser.plan);
 
 	return (
-		<main className="min-h-screen bg-[hsl(222,47%,4%)] p-4 sm:p-6 lg:p-8 pt-24 text-slate-200">
-			<div className="max-w-7xl mx-auto space-y-8">
+		<main className="app-shell text-slate-200">
+			<div className="app-container space-y-6 sm:space-y-8">
 				<BackButton />
 
 				{/* Header & Quick Stats */}
-				<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-					<div className="flex items-center gap-4">
-						<div className="w-16 h-16 rounded-full bg-sky-500/10 flex items-center justify-center border border-sky-500/20">
-							<span className="text-2xl font-bold text-sky-400">
+				<div className="flex flex-col items-start justify-between gap-5 lg:flex-row lg:items-center">
+					<div className="flex items-center gap-3 sm:gap-4">
+						<div className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-500/20 bg-sky-500/10 sm:h-14 sm:w-14">
+							<span className="text-xl font-bold text-sky-400 sm:text-2xl">
 								{(session.user.name || "U")[0].toUpperCase()}
 							</span>
 						</div>
-						<div>
-							<h1 className="text-3xl font-bold text-white tracking-tight">My Reports</h1>
-							<p className="text-slate-400">Welcome back, {session.user.name || session.user.email}</p>
+						<div className="min-w-0">
+							<h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">My Reports</h1>
+							<p className="text-sm text-slate-400 sm:text-base">Welcome back, {session.user.name || session.user.email}</p>
 						</div>
 					</div>
 
-					<div className="flex items-center gap-4">
+					<div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
 						{canAccessAdmin ? (
 							<Link
 								href="/admin/promo"
-								className="inline-flex items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-4 h-8 font-medium text-sky-300 transition-colors hover:bg-sky-500/20"
+								className="inline-flex h-9 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-4 text-sm font-medium text-sky-300 transition-colors hover:bg-sky-500/20"
 							>
 								<ShieldCheck className="w-4 h-4 mr-2" />
 								Admin Console
@@ -68,7 +68,7 @@ export default async function ReportsPage() {
 
 						{/* Credit Badge */}
 						<div
-							className={`flex items-center px-4 py-2 rounded-xl border backdrop-blur-md ${
+							className={`flex min-h-9 items-center rounded-xl border px-4 py-2 backdrop-blur-md ${
 								hasCredits
 									? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
 									: "bg-red-500/10 border-red-500/20 text-red-400"
@@ -84,7 +84,7 @@ export default async function ReportsPage() {
 						{!hasCredits ? (
 							<Link
 								href="/credits"
-								className="inline-flex items-center justify-center rounded-lg bg-amber-500 hover:bg-amber-400 text-white font-medium shadow-lg shadow-amber-500/20 px-6 h-8 transition-colors"
+								className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-500 px-6 text-sm font-medium text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-400"
 							>
 								<Crown className="w-5 h-5 mr-2" />
 								Add Credits
@@ -95,7 +95,7 @@ export default async function ReportsPage() {
 
 				{/* Not enough Credits Alert */}
 				{!hasCredits && (
-					<div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-4 text-amber-200">
+					<div className="flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-amber-200 sm:gap-4">
 						<Crown className="w-6 h-6 text-amber-500 shrink-0" />
 						<div>
 							<h4 className="font-bold">Insufficient credits!</h4>
@@ -111,8 +111,8 @@ export default async function ReportsPage() {
 
 				{/* Reports Section */}
 				<div>
-					<div className="flex justify-between items-center mb-4">
-						<h2 className="text-xl font-bold text-white flex items-center">
+					<div className="mb-4 flex items-center justify-between">
+						<h2 className="flex items-center text-lg font-bold text-white sm:text-xl">
 							<ShieldCheck className="w-5 h-5 mr-2 text-sky-400" />
 							Recent Claims
 						</h2>

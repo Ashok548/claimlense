@@ -44,6 +44,41 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-inter), sans-serif;
+  min-width: 320px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: hsl(var(--background));
+  /* Mobile: navbar is h-14 (3.5rem = 56px) + 1.25rem gap */
+  padding-top: calc( 1.25rem);
+  padding-right: 1.25rem;
+  padding-bottom: 2rem;
+  padding-left: 1.25rem;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 72rem;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    /* sm+: navbar is h-16 (4rem = 64px) + 1.5rem gap */
+    padding-top: calc( 1.5rem);
+    padding-right: 1.5rem;
+    padding-bottom: 2.5rem;
+    padding-left: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
 }
 
 /* Payability status colors */
