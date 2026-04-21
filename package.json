@@ -9,7 +9,12 @@
     "dev:web": "cd apps/web && npm run dev",
     "install:all": "npm install && cd apps/web && npm install && cd ../api && pip install -r requirements.txt",
     "prisma:seed": "cd apps/web && npx prisma db seed",
-    "prisma:seed:users": "cd apps/web && npm run prisma:seed:users"
+    "prisma:seed:users": "cd apps/web && npm run prisma:seed:users",
+    "db:migrate": "cd apps/api && alembic upgrade head",
+    "db:seed": "cd apps/api && python seeds/runner.py",
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "web:migrate": "cd apps/web && npx prisma migrate dev",
+    "db:all": "npm run db:setup && npm run web:migrate"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
