@@ -50,7 +50,7 @@ module.exports = {
   apps: [
     {
       name: "claimsmart-web",
-      script: ".next/standalone/server.js",
+      script: ".next/standalone/apps/web/server.js",
       interpreter: "node",
       cwd: appRoot,
       instances: 1,
@@ -59,8 +59,8 @@ module.exports = {
       max_memory_restart: "512M",
 
       env_production: {
-        ...productionEnv,
         ...process.env,
+        ...productionEnv,
         NODE_ENV: "production",
         PORT: "3000",
         HOSTNAME: "0.0.0.0",
