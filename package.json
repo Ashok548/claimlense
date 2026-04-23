@@ -15,13 +15,21 @@
     "db:migrate": "cd apps/api && alembic upgrade head",
     "db:seed": "cd apps/api && python seeds/runner.py",
     "db:setup": "npm run db:migrate && npm run db:seed",
-    "web:migrate": "cd apps/web && npx prisma migrate dev",
+    "web:migrate": "cd apps/web && npm run prisma:dev",
     "db:all": "npm run db:setup && npm run web:migrate",
 
-    "prod:web:generate": "cd apps/web && npm run prisma:generate",
-    "prod:web:migrate": "cd apps/web && npm run prisma:migrate:deploy",
+    "web:generate": "cd apps/web && npm run prisma:generate",
+    "web:migrate:prod": "cd apps/web && npm run prisma:prod",
     "prisma:seed": "cd apps/web && npx prisma db seed",
     "prisma:seed:users": "cd apps/web && npm run prisma:seed:users",
+
+    "________LOCAL PROD TEST (Windows)________": "echo --- local prod test scripts ---",
+
+    "local-prod:build:web": "cd apps/web && npm run build",
+    "local-prod:start:api": "cd apps/api && ..\\..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000",
+    "local-prod:start:web": "cd apps/web && npm run start:local-prod",
+    "local-prod:start": "concurrently \"npm run local-prod:start:api\" \"npm run local-prod:start:web\"",
+    "local-prod": "npm run local-prod:build:web && npm run local-prod:start",
 
     "________PROD (Linux server)________": "echo --- prod scripts ---",
 
@@ -30,14 +38,14 @@
     "prod:db:migrate": "cd apps/api && ../../.venv/bin/python -m alembic upgrade head",
     "prod:db:seed": "cd apps/api && ../../.venv/bin/python seeds/runner.py",
     "prod:db:setup": "npm run prod:db:migrate && npm run prod:db:seed",
-    "prod:db:all": "npm run prod:db:setup && npm run prod:web:migrate",
+    "prod:db:all": "npm run prod:db:setup && npm run web:migrate:prod",
 
     "prod:build:api": "cd apps/api && ../../.venv/bin/python -m compileall .",
-    "prod:build:web": "cd apps/web && npm run prisma:generate && npm run build",
+    "prod:build:web": "cd apps/web && npm run prisma:generate && npm run build:prod",
     "prod:build": "npm run prod:build:api && npm run prod:build:web",
 
     "prod:start:api": "cd apps/api && ../../.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000",
-    "prod:start:web": "cd apps/web && npm run start -- --hostname 0.0.0.0 --port 3000",
+    "prod:start:web": "cd apps/web && npm run start:prod",
     "prod:start": "concurrently \"npm run prod:start:api\" \"npm run prod:start:web\""
   },
   "devDependencies": {

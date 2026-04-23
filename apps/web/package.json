@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:prod": "next build",
+    "start:prod": "node .next/standalone/server.js",
+    "start:local-prod": "dotenv -e .env.local -- node .next/standalone/server.js",
     "lint": "eslint",
     "prisma:generate": "prisma generate",
-    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:dev": "dotenv -e .env.prisma.local -- prisma migrate dev",
+    "prisma:prod": "dotenv -e .env.prisma.prod -- prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed:users": "tsx prisma/seed-users.ts"
   },
@@ -45,6 +49,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "dotenv-cli": "^8.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",

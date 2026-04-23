@@ -41,43 +41,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Mirror / update user in PostgreSQL on every sign-in.
         // If a row already exists for the same email (seeded or legacy auth),
         // attach the Firebase UID instead of trying to create a duplicate.
-        const existingUser = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { firebaseUid: uid },
-              ...(email ? [{ email }] : []),
-            ],
-          },
-        });
+        try {
+          const existingUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { firebaseUid: uid },
+                ...(email ? [{ email }] : []),
+              ],
+            },
+          });
 
-        const user = existingUser
-          ? await prisma.user.update({
-              where: { id: existingUser.id },
-              data: {
-                firebaseUid: uid,
-                email: email ?? existingUser.email,
-                name: name ?? existingUser.name,
-                image: picture ?? existingUser.image,
-                plan: claimPlan,
-              },
-            })
-          : await prisma.user.create({
-              data: {
-                firebaseUid: uid,
-                email: email ?? null,
-                name: name ?? email?.split("@")[0] ?? null,
-                image: picture ?? null,
-                plan: claimPlan,
-                // credits default to 200 from schema
-              },
-            });
+          const user = existingUser
+            ? await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  firebaseUid: uid,
+                  email: email ?? existingUser.email,
+                  name: name ?? existingUser.name,
+                  image: picture ?? existingUser.image,
+                  plan: claimPlan,
+                },
+              })
+            : await prisma.user.create({
+                data: {
+                  firebaseUid: uid,
+                  email: email ?? null,
+                  name: name ?? email?.split("@")[0] ?? null,
+                  image: picture ?? null,
+                  plan: claimPlan,
+                  // credits default to 200 from schema
+                },
+              });
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          plan: user.plan,
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            plan: user.plan,
+          };
+        } catch (error) {
+          console.error("NextAuth authorize() failed to sync Firebase user", error);
+          return null;
+        }
       },
     }),
   ],

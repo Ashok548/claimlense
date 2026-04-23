@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { defineConfig } from "@prisma/config";
 import { withRequiredTls } from "./lib/database-url";
 

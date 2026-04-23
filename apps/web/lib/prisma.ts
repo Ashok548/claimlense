@@ -7,10 +7,10 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const connectionString = withRequiredTls(process.env.DATABASE_URL);
+const connectionString = withRequiredTls(process.env.DATABASE_POOL_URL ?? process.env.DATABASE_URL);
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL is not set.');
+  throw new Error('DATABASE_POOL_URL or DATABASE_URL is not set.');
 }
 
 const ssl = getPgSslConfig(connectionString);
