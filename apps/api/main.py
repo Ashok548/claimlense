@@ -30,7 +30,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://claimsmart.in",  # Production domain
+        "https://claimlense.com",  # Production domain
     ],
     allow_credentials=True,
     allow_methods=["*"],
