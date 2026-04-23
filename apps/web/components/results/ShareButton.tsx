@@ -14,7 +14,7 @@ export function ShareButton({ analysisId, insurerName }: Props) {
 
   const handleShare = async () => {
     const url = `${window.location.origin}/results/${analysisId}`;
-    const title = `ClaimSmart Analysis — ${insurerName}`;
+    const title = `ClaimLense Analysis — ${insurerName}`;
 
     if (typeof navigator.share === "function") {
       try {

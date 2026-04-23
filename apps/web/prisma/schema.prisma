@@ -108,7 +108,7 @@ model User {
   phone         String?     @unique
   image         String?
   plan             Plan              @default(FREE)
-  credits          Int               @default(200)
+  credits          Int               @default(0)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   password         String?

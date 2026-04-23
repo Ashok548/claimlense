@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useCredits } from "@/hooks/useCredits";
 
 const STATS = [
   { value: "₹18,400", label: "Average claim at risk per bill" },
@@ -93,9 +94,22 @@ const EXAMPLE_ITEMS = [
 export default function LandingPage() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(false);
+  const { credits, isLoading } = useCredits();
 
   const handleStartAnalysis = async () => {
     setIsChecking(true);
+    
+    // Fast path: if context already has credits loaded
+    if (!isLoading && credits !== undefined) {
+      if (credits >= 200) {
+        router.push("/analyze");
+      } else {
+        router.push("/credits");
+      }
+      return; // done, no need to setIsChecking(false) since we are routing
+    }
+    
+    // Fallback: mostly for unauthenticated users needing the 401
     try {
       const res = await fetch("/api/check-credits");
       if (res.status === 401) {
@@ -160,6 +174,7 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
+                onClick={() => document.getElementById("example")?.scrollIntoView({ behavior: "smooth" })}
                 className="border border-white/10 text-slate-300 hover:bg-white/5 px-5 py-3 text-sm md:text-base rounded-lg"
               >
                 <FileSearch className="w-5 h-5 mr-2" />
@@ -210,7 +225,7 @@ export default function LandingPage() {
                 <div className="text-green-400 font-bold text-lg">₹41,000</div>
               </div>
               <div>
-                <span className="text-slate-400 text-sm">At Risk</span>
+                <span className="text-slate-400 text-sm">May not be Payable</span>
                 <div className="text-red-400 font-bold text-lg">₹8,850</div>
               </div>
             </div>
@@ -238,8 +253,7 @@ export default function LandingPage() {
               <div className="flex items-start gap-2 text-sm text-yellow-400">
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>
-                  ₹8,850 at risk. Before discharge: Ask billing to bundle gloves into OT charges
-                  and request room downgrade.
+                  ₹8,850 at risk. Before discharge: Ask billing to bundle gloves and laser machine charges into the surgical package, and request a room downgrade.
                 </span>
               </div>
             </div>
@@ -283,7 +297,7 @@ export default function LandingPage() {
             Don&apos;t Lose Money on a Preventable Rejection
           </h2>
           <p className="text-slate-400 mb-8">
-            Get 200 credits free on sign-up. Each analysis uses 200 credits. Top up anytime for ₹200.
+            Each analysis uses 200 credits. Top up anytime for ₹200.
           </p>
           <Button
             size="lg"
@@ -300,7 +314,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-6 px-5 border-t border-white/5 text-center">
         <p className="text-slate-600 text-sm">
-          © 2026 ClaimSmart · Not a TPA or insurance intermediary ·
+          © 2026 ClaimLense · Not a TPA or insurance intermediary ·
           Analysis based on IRDAI guidelines · Not legal advice
         </p>
       </footer>

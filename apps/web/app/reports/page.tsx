@@ -2,9 +2,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Coins, Crown } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { BackButton } from "@/components/navigation/BackButton";
 import { ReportHistoryTable } from "@/components/dashboard/ReportHistoryTable";
+import { CreditsHeaderActions, CreditsAlert } from "@/components/dashboard/CreditsStatusBadge";
 import { isProAdmin } from "@/lib/admin";
 
 export default async function ReportsPage() {
@@ -32,13 +33,11 @@ export default async function ReportsPage() {
 		totalAtRisk: Number(report.totalAtRisk),
 		createdAt: report.createdAt.toISOString(),
 	}));
-	const credits = dbUser.credits;
-	const hasCredits = credits >= 200;
 	const canAccessAdmin = isProAdmin(dbUser.plan);
 
 	return (
 		<main className="app-shell text-slate-200">
-			<div className="app-container space-y-6 sm:space-y-8">
+			<div className="app-container space-y-4 sm:space-y-6">
 				<BackButton />
 
 				{/* Header & Quick Stats */}
@@ -50,8 +49,8 @@ export default async function ReportsPage() {
 							</span>
 						</div>
 						<div className="min-w-0">
-							<h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">My Reports</h1>
-							<p className="text-sm text-slate-400 sm:text-base">Welcome back, {session.user.name || session.user.email}</p>
+							<h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">My Reports</h1>
+							<p className="text-xs text-slate-400 sm:text-sm">Welcome back, {session.user.name || session.user.email}</p>
 						</div>
 					</div>
 
@@ -66,54 +65,18 @@ export default async function ReportsPage() {
 							</Link>
 						) : null}
 
-						{/* Credit Badge */}
-						<div
-							className={`flex min-h-9 items-center rounded-xl border px-4 py-2 backdrop-blur-md ${
-								hasCredits
-									? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-									: "bg-red-500/10 border-red-500/20 text-red-400"
-							}`}
-						>
-							<Coins className="w-5 h-5 mr-2" />
-							<div className="flex flex-col">
-								<span className="text-xs uppercase font-semibold opacity-80 leading-tight">Credits</span>
-								<span className="text-sm font-bold leading-tight">{credits} Available</span>
-							</div>
-						</div>
-
-						{!hasCredits ? (
-							<Link
-								href="/credits"
-								className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-500 px-6 text-sm font-medium text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-400"
-							>
-								<Crown className="w-5 h-5 mr-2" />
-								Add Credits
-							</Link>
-						) : null}
+						<CreditsHeaderActions />
 					</div>
 				</div>
 
 				{/* Not enough Credits Alert */}
-				{!hasCredits && (
-					<div className="flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-amber-200 sm:gap-4">
-						<Crown className="w-6 h-6 text-amber-500 shrink-0" />
-						<div>
-							<h4 className="font-bold">Insufficient credits!</h4>
-							<p className="text-sm opacity-80 mt-1">
-								You need at least 200 credits to perform a new analysis. Top up your wallet to continue checking claims.{" "}
-								<Link href="/credits" className="underline underline-offset-2 font-semibold hover:text-amber-100">
-									Open Wallet →
-								</Link>
-							</p>
-						</div>
-					</div>
-				)}
+				<CreditsAlert />
 
 				{/* Reports Section */}
 				<div>
 					<div className="mb-4 flex items-center justify-between">
-						<h2 className="flex items-center text-lg font-bold text-white sm:text-xl">
-							<ShieldCheck className="w-5 h-5 mr-2 text-sky-400" />
+						<h2 className="flex items-center text-base font-semibold text-white sm:text-lg">
+							<ShieldCheck className="w-4 h-4 mr-2 text-sky-400" />
 							Recent Claims
 						</h2>
 					</div>

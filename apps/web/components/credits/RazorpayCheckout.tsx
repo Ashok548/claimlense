@@ -49,7 +49,7 @@ export function RazorpayCheckout({ userName, userEmail }: { userName?: string; u
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "ClaimSmart",
+        name: "ClaimLense",
         description: "200 Analysis Credits",
         order_id: orderData.orderId,
         handler: async function (response: any) {

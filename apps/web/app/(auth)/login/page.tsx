@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { firebaseAuth, getFirebaseAuthDomain, signInWithGooglePopup } from "@/lib/firebase";
 import { ShieldCheck, Loader2 } from "lucide-react";
@@ -25,6 +26,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email above to reset your password.");
+      return;
+    }
+    setError("");
+    setResetSent(false);
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email);
+      setResetSent(true);
+    } catch (err: unknown) {
+      setError("Failed to send reset email. Please check the email address.");
+    }
+  };
 
   async function loginWithNextAuth(firebaseToken: string) {
     const res = await signIn("credentials", {
@@ -121,6 +138,11 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+          {resetSent && (
+            <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm text-center">
+              Password reset email sent! Check your inbox.
+            </div>
+          )}
 
           {/* Google Sign-In */}
           <Button
@@ -179,9 +201,18 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">
-                Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-slate-300">
+                  Password
+                </Label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-sky-400 hover:text-sky-300 hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"

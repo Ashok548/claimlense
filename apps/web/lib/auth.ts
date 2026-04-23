@@ -69,7 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   name: name ?? email?.split("@")[0] ?? null,
                   image: picture ?? null,
                   plan: claimPlan,
-                  // credits default to 200 from schema
+                  credits: 0,
                 },
               });
 

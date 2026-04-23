@@ -17,33 +17,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getFirebaseIdToken } from "@/lib/firebase";
 import Link from "next/link";
+import { useCredits } from "@/hooks/useCredits";
 
 const STEPS = ["Insurer", "Plan & Riders", "Policy", "Diagnosis", "Bill Items"];
 
 export default function AnalyzeWizard() {
   const router = useRouter();
+  const { credits, isLoading } = useCredits();
   
-  // -- Credit Gate: check on mount
-  const [creditsChecked, setCreditsChecked] = useState(false);
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
+  // -- Credit Gate: derive from context
+  const creditsChecked = !isLoading;
+  const insufficientCredits = credits !== undefined && credits < 200;
 
   useEffect(() => {
-    fetch("/api/check-credits")
-      .then(async (res) => {
-        if (res.status === 401) {
-          router.replace("/login?callbackUrl=/analyze");
-          return;
-        }
-        if (res.ok) {
-          const data = await res.json();
-          if (data.credits < 200) {
-            setInsufficientCredits(true);
-          }
-        }
-        setCreditsChecked(true);
-      })
-      .catch(() => setCreditsChecked(true)); // allow page to load on network error
-  }, [router]);
+     if (!isLoading && credits === undefined) {
+         router.replace("/login?callbackUrl=/analyze");
+     }
+  }, [isLoading, credits, router]);
 
   // -- Wizard State
   const [step, setStep] = useState(0);

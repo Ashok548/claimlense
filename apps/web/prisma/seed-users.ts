@@ -40,19 +40,8 @@ async function main() {
       email: 'ashok.pdcs@gmail.com',
       plan: Plan.PRO,
       credits: 1000,
-    },
-    {
-      name: 'Rupa User',
-      email: 'rupa@example.com',
-      plan: Plan.FREE,
-      credits: 5,
-    },
-    {
-      name: 'Demo Account',
-      email: 'demo@claimsmart.ai',
-      plan: Plan.B2B,
-      credits: 999,
-    },
+    }
+
   ];
 
   for (const u of users) {

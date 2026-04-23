@@ -5,9 +5,10 @@ import { Coins, History, FileText, CheckCircle2, Clock, XCircle } from "lucide-r
 import { BackButton } from "@/components/navigation/BackButton";
 import { RazorpayCheckout } from "@/components/credits/RazorpayCheckout";
 import { PromoCodeRedeemer } from "@/components/credits/PromoCodeRedeemer";
+import { CreditsBalanceCard } from "@/components/credits/CreditsBalanceCard";
 
 export const metadata = {
-  title: "Credits | ClaimSmart",
+  title: "Credits | ClaimLense",
 };
 
 export default async function CreditsPage() {
@@ -24,7 +25,7 @@ export default async function CreditsPage() {
   const [dbUser, payments, reports] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { credits: true },
+      select: { id: true },
     }),
     prisma.payment.findMany({
       where: { userId },
@@ -44,9 +45,6 @@ export default async function CreditsPage() {
     redirect("/login");
   }
 
-  const credits = dbUser.credits;
-  const hasEnough = credits >= 200;
-
   return (
     <main className="app-shell text-slate-200">
       <div className="app-container space-y-5 sm:space-y-6">
@@ -65,37 +63,7 @@ export default async function CreditsPage() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           
           {/* Balance Card */}
-          <div className="glass relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/10 p-5 shadow-2xl">
-            <div className="absolute right-0 top-0 p-6 opacity-10">
-              <Coins className="h-24 w-24 text-sky-500" />
-            </div>
-            
-            <div className="relative z-10">
-              <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Current Balance</h2>
-              <div className="mb-3 flex items-end gap-2">
-                <span className={`text-2xl font-bold tracking-tighter sm:text-3xl ${hasEnough ? "text-white" : "text-amber-400"}`}>
-                  {credits}
-                </span>
-                <span className="mb-0.5 text-base text-slate-500 sm:text-lg">credits</span>
-              </div>
-              
-              <div className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium sm:text-sm ${
-                hasEnough ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-              }`}>
-                {hasEnough ? (
-                  <>
-                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                    Sufficient for new analysis (200 req)
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="mr-1.5 h-3.5 w-3.5" />
-                    Insufficient. Top up 200 to analyze.
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+          <CreditsBalanceCard />
 
           {/* Action Cards */}
           <div className="flex flex-col space-y-5">

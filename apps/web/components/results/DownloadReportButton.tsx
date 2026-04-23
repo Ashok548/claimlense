@@ -32,7 +32,7 @@ export function DownloadReportButton({ analysisId }: Props) {
       // Perform the download
       const a = document.createElement("a");
       a.href = download_url;
-      a.download = `ClaimSmart_Analysis_${analysisId}.pdf`;
+      a.download = `ClaimLense_Analysis_${analysisId}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

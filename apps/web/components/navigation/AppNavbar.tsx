@@ -11,11 +11,13 @@ import { useEffect, useRef, useState } from "react";
 type AppNavbarProps = {
   isAuthenticated: boolean;
   userName?: string | null;
-  credits?: number;
 };
 
-export function AppNavbar({ isAuthenticated, userName, credits }: AppNavbarProps) {
+import { useCredits } from "@/hooks/useCredits";
+
+export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
   const pathname = usePathname();
+  const { credits } = useCredits();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -49,7 +51,7 @@ export function AppNavbar({ isAuthenticated, userName, credits }: AppNavbarProps
   }
 
   const isLanding = pathname === "/";
-  const isReport = pathname.startsWith("/results") || pathname.startsWith("/report");
+  const isReport = pathname.startsWith("/results") || pathname === "/report";
   const isReports = pathname.startsWith("/reports") || pathname.startsWith("/dashboard");
 
   // Secondary nav links shown in desktop header and mobile drawer
@@ -73,7 +75,7 @@ export function AppNavbar({ isAuthenticated, userName, credits }: AppNavbarProps
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 text-white">
             <ShieldCheck className="h-5 w-5 text-sky-400" />
-            <span className="text-sm font-semibold tracking-tight sm:text-base">ClaimSmart</span>
+            <span className="text-sm font-semibold tracking-tight sm:text-base">ClaimLense</span>
           </Link>
         </div>
 
@@ -98,23 +100,23 @@ export function AppNavbar({ isAuthenticated, userName, credits }: AppNavbarProps
             </Link>
           )}
 
-          {/* Results: New Analysis CTA — desktop+ only, mobile uses strip below */}
+          {/* Results: Analyze Claim CTA — desktop+ only, mobile uses strip below */}
           {isReport && (
             <Link
               href="/analyze"
-              className="hidden sm:inline-flex h-9 items-center justify-center rounded-lg bg-sky-500 px-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98] sm:px-4"
+              className="hidden sm:inline-flex h-8 items-center justify-center rounded-lg bg-sky-500 px-3 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98] sm:px-4 sm:h-9 sm:text-sm"
             >
-              New Analysis
+              Analyze Claim
             </Link>
           )}
 
-          {/* Reports/Dashboard: Analyze CTA — always visible, compact on mobile */}
+          {/* Reports/Dashboard: Analyze Claim CTA — always visible, compact on mobile */}
           {isReports && (
             <Link
               href="/analyze"
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-sky-500 px-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98] sm:px-4"
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-sky-500 px-3 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98] sm:px-4 sm:h-9 sm:text-sm"
             >
-              Analyze
+              Analyze Claim
             </Link>
           )}
 
@@ -261,7 +263,7 @@ export function AppNavbar({ isAuthenticated, userName, credits }: AppNavbarProps
             href="/analyze"
             className="mx-auto flex h-11 max-w-6xl items-center justify-center rounded-xl bg-sky-500 text-sm font-semibold text-white shadow-2xl shadow-sky-500/25 transition-all hover:bg-sky-400 active:scale-[0.98]"
           >
-            Start Another Analysis
+            Analyze Claim
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </div>

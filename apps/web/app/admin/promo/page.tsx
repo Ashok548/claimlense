@@ -5,7 +5,7 @@ import { isProAdmin } from "@/lib/admin";
 import { PromoCodeManager } from "@/components/admin/PromoCodeManager";
 
 export const metadata = {
-  title: "Admin Promo Codes | ClaimSmart",
+  title: "Admin Promo Codes | ClaimLense",
 };
 
 export default async function AdminPromoPage() {

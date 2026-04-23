@@ -23,19 +23,19 @@ interface Props {
 export function ReportHistoryTable({ reports }: Props) {
   if (reports.length === 0) {
     return (
-      <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 text-center flex flex-col items-center sm:p-10sm:p-10">
-        <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-          <CopyX className="w-8 h-8 text-slate-500" />
+      <div className="bg-slate-900/30 border border-white/10 rounded-xl py-10 px-4 flex flex-col items-center justify-center text-center">
+        <div className="w-12 h-12 rounded-full bg-slate-800/80 border border-white/5 flex items-center justify-center mb-3">
+          <CopyX className="w-5 h-5 text-slate-400" />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">No Reports Yet</h3>
-        <p className="text-slate-400 mb-6 text-sm">
-          You haven&apos;t generated any claim analysis reports yet.
+        <h3 className="text-base font-semibold text-white mb-1">No reports yet</h3>
+        <p className="text-sm text-slate-400 mb-5">
+          Start your first claim analysis
         </p>
         <Link 
           href="/analyze" 
-          className="bg-sky-500 hover:bg-sky-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          className="inline-flex h-9 items-center justify-center rounded-lg bg-sky-500 px-5 text-sm font-medium text-white shadow-sm shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98]"
         >
-          Start New Analysis
+          Analyze Your First Claim
         </Link>
       </div>
     );
