@@ -1,15 +1,23 @@
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { getPgSslConfig, toPgPoolConnectionString, withRequiredTls } from './database-url';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Ensure DATABASE_URL is available
-const connectionString = `${process.env.DATABASE_URL}`;
+const connectionString = withRequiredTls(process.env.DATABASE_URL);
 
-const pool = new Pool({ connectionString });
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not set.');
+}
+
+const ssl = getPgSslConfig(connectionString);
+const pool = new Pool({
+  connectionString: toPgPoolConnectionString(connectionString),
+  ...(ssl ? { ssl } : {}),
+});
 const adapter = new PrismaPg(pool);
 
 export const prisma =

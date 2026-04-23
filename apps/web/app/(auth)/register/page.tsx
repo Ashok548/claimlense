@@ -8,16 +8,12 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendEmailVerification,
-  signInWithPopup,
-  GoogleAuthProvider,
 } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase";
+import { firebaseAuth, getFirebaseAuthDomain, signInWithGooglePopup } from "@/lib/firebase";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const googleProvider = new GoogleAuthProvider();
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -78,12 +74,21 @@ export default function RegisterPage() {
     setGoogleLoading(true);
     setError("");
     try {
-      const credential = await signInWithPopup(firebaseAuth, googleProvider);
+      const credential = await signInWithGooglePopup();
       const firebaseToken = await credential.user.getIdToken();
       await loginWithNextAuth(firebaseToken);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
-      if (code !== "auth/popup-closed-by-user") {
+      if (code === "auth/popup-blocked") {
+        setError("Your browser blocked the Google sign-in popup. Allow popups and try again.");
+      } else if (code === "auth/unauthorized-domain") {
+        setError(
+          `Google sign-in is not enabled for this domain. Add ${window.location.hostname} to Firebase authorized domains and verify NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is set to ${getFirebaseAuthDomain()}.`
+        );
+      } else if (
+        code !== "auth/popup-closed-by-user" &&
+        code !== "auth/cancelled-popup-request"
+      ) {
         setError("Google sign-in failed. Please try again.");
       }
     } finally {

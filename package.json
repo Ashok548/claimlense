@@ -18,6 +18,8 @@
     "web:migrate": "cd apps/web && npx prisma migrate dev",
     "db:all": "npm run db:setup && npm run web:migrate",
 
+    "prod:web:generate": "cd apps/web && npm run prisma:generate",
+    "prod:web:migrate": "cd apps/web && npm run prisma:migrate:deploy",
     "prisma:seed": "cd apps/web && npx prisma db seed",
     "prisma:seed:users": "cd apps/web && npm run prisma:seed:users",
 
@@ -28,13 +30,14 @@
     "prod:db:migrate": "cd apps/api && ../../.venv/bin/python -m alembic upgrade head",
     "prod:db:seed": "cd apps/api && ../../.venv/bin/python seeds/runner.py",
     "prod:db:setup": "npm run prod:db:migrate && npm run prod:db:seed",
+    "prod:db:all": "npm run prod:db:setup && npm run prod:web:migrate",
 
     "prod:build:api": "cd apps/api && ../../.venv/bin/python -m compileall .",
-    "prod:build:web": "cd apps/web && npm run build",
+    "prod:build:web": "cd apps/web && npm run prisma:generate && npm run build",
     "prod:build": "npm run prod:build:api && npm run prod:build:web",
 
     "prod:start:api": "cd apps/api && ../../.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000",
-    "prod:start:web": "cd apps/web && npm run start",
+    "prod:start:web": "cd apps/web && npm run start -- --hostname 0.0.0.0 --port 3000",
     "prod:start": "concurrently \"npm run prod:start:api\" \"npm run prod:start:web\""
   },
   "devDependencies": {
