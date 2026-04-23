@@ -22,6 +22,7 @@
     "web:migrate:prod": "cd apps/web && npm run prisma:prod",
     "prisma:seed": "cd apps/web && npx prisma db seed",
     "prisma:seed:users": "cd apps/web && npm run prisma:seed:users",
+    "prisma:seed:users:prod": "cd apps/web && npm run prisma:seed:users:prod",
 
     "________LOCAL PROD TEST (Windows)________": "echo --- local prod test scripts ---",
 

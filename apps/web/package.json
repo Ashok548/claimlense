@@ -14,7 +14,8 @@
     "prisma:dev": "dotenv -e .env.prisma.local -- prisma migrate dev",
     "prisma:prod": "dotenv -e .env.prisma.prod -- prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:seed:users": "tsx prisma/seed-users.ts"
+    "prisma:seed:users": "tsx prisma/seed-users.ts",
+    "prisma:seed:users:prod": "dotenv -e .env.production -- tsx prisma/seed-users.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

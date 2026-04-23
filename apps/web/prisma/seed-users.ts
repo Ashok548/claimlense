@@ -1,15 +1,20 @@
 import { PrismaClient, Plan } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import * as dotenv from 'dotenv';
 import * as admin from 'firebase-admin';
+import { getPgSslConfig, toPgPoolConnectionString, withRequiredTls } from '../lib/database-url';
 
-// Load env vars
-dotenv.config({ path: '.env.local' });
-dotenv.config({ path: '.env' });
+const connectionString = withRequiredTls(process.env.DATABASE_POOL_URL ?? process.env.DATABASE_URL);
 
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
+if (!connectionString) {
+  throw new Error('DATABASE_POOL_URL or DATABASE_URL is not set.');
+}
+
+const ssl = getPgSslConfig(connectionString);
+const pool = new Pool({
+  connectionString: toPgPoolConnectionString(connectionString),
+  ...(ssl ? { ssl } : {}),
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
