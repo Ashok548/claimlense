@@ -123,7 +123,7 @@ export function PromoCodeManager({ initialPromoCodes }: { initialPromoCodes: Pro
   return (
     <div className="space-y-6">
       <section className="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-6 shadow-xl backdrop-blur">
+        <div className="min-w-0 rounded-3xl border border-white/10 bg-slate-950/60 p-6 shadow-xl backdrop-blur">
           <div className="mb-6 flex items-start gap-3">
             <div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-300">
               <Plus className="h-5 w-5" />
@@ -198,7 +198,7 @@ export function PromoCodeManager({ initialPromoCodes }: { initialPromoCodes: Pro
           </form>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-6 shadow-xl backdrop-blur">
+        <div className="min-w-0 rounded-3xl border border-white/10 bg-slate-950/60 p-6 shadow-xl backdrop-blur">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
               <h2 className="flex items-center gap-2 text-lg font-semibold text-white">

@@ -51,12 +51,10 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
   }
 
   const isLanding = pathname === "/";
-  const isReport = pathname.startsWith("/results") || pathname === "/report";
-  const isReports = pathname.startsWith("/reports") || pathname.startsWith("/dashboard");
 
   // Secondary nav links shown in desktop header and mobile drawer
   const hasSecondaryLink =
-    (isLanding && !isAuthenticated) || (isLanding && isAuthenticated);
+    (isLanding && !isAuthenticated) || isAuthenticated;
 
   function handleSignOut() {
     setUserMenuOpen(false);
@@ -91,7 +89,7 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
               See Example
             </Link>
           )}
-          {isLanding && isAuthenticated && (
+          {isAuthenticated && (
             <Link
               href="/reports"
               className="hidden md:inline-flex h-9 items-center rounded-lg px-2 text-sm font-medium text-slate-300 transition-colors hover:text-white"
@@ -100,25 +98,7 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
             </Link>
           )}
 
-          {/* Results: Analyze Claim CTA — desktop+ only, mobile uses strip below */}
-          {isReport && (
-            <Link
-              href="/analyze"
-              className="hidden sm:inline-flex h-8 items-center justify-center rounded-lg bg-sky-500 px-3 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98] sm:px-4 sm:h-9 sm:text-sm"
-            >
-              Analyze Claim
-            </Link>
-          )}
 
-          {/* Reports/Dashboard: Analyze Claim CTA — always visible, compact on mobile */}
-          {isReports && (
-            <Link
-              href="/analyze"
-              className="inline-flex h-8 items-center justify-center rounded-lg bg-sky-500 px-3 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 hover:shadow-sky-500/30 active:scale-[0.98] sm:px-4 sm:h-9 sm:text-sm"
-            >
-              Analyze Claim
-            </Link>
-          )}
 
           {/* Desktop: user avatar dropdown */}
           {isAuthenticated && (
@@ -203,7 +183,7 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
                       See Example
                     </Link>
                   )}
-                  {isLanding && isAuthenticated && (
+                  {isAuthenticated && (
                     <Link
                       href="/reports"
                       className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
@@ -256,18 +236,6 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
         </div>
       </div>
 
-      {/* Mobile only: sticky CTA strip on report pages */}
-      {isReport && (
-        <div className="border-t border-white/5 px-4 py-2.5 sm:hidden">
-          <Link
-            href="/analyze"
-            className="mx-auto flex h-11 max-w-6xl items-center justify-center rounded-xl bg-sky-500 text-sm font-semibold text-white shadow-2xl shadow-sky-500/25 transition-all hover:bg-sky-400 active:scale-[0.98]"
-          >
-            Analyze Claim
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </div>
-      )}
     </header>
   );
 }

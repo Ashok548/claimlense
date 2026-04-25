@@ -15,9 +15,12 @@ export default async function AdminPromoPage() {
     redirect("/login?callbackUrl=/admin/promo");
   }
 
-  const userPlan = (session.user as typeof session.user & { plan?: string | null }).plan;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { plan: true }
+  });
 
-  if (!isProAdmin(userPlan)) {
+  if (!dbUser || !isProAdmin(dbUser.plan)) {
     redirect("/dashboard");
   }
 

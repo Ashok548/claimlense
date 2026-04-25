@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export function isProAdmin(plan: string | null | undefined) {
   return plan === "PRO";
@@ -11,9 +12,12 @@ export async function requireProApiUser() {
     return { error: "Unauthorized", status: 401 } as const;
   }
 
-  const userPlan = (session.user as typeof session.user & { plan?: string | null }).plan;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { plan: true }
+  });
 
-  if (!isProAdmin(userPlan)) {
+  if (!dbUser || !isProAdmin(dbUser.plan)) {
     return { error: "Forbidden", status: 403 } as const;
   }
 
