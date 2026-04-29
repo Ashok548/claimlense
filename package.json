@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Root management for ClaimAnalyse insurance analyzer",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "________DEV (local Windows)________": "echo --- dev scripts ---",
 

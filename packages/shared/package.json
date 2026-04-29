@@ -1,0 +1,13 @@
+{
+  "name": "@claimlense/shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types, utilities, and API logic for ClaimLense apps",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts",
+    "./lib": "./src/lib/index.ts"
+  }
+}

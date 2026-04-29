@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@claimlense/shared": ["../../packages/shared/src/index.ts"],
+      "@claimlense/shared/types": ["../../packages/shared/src/types/index.ts"],
+      "@claimlense/shared/lib": ["../../packages/shared/src/lib/index.ts"]
     }
   },
   "include": [
