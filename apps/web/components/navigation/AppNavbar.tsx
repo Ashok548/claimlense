@@ -98,6 +98,25 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
             </Link>
           )}
 
+          {/* Desktop: Login + Sign Up for guests */}
+          {!isAuthenticated && (
+            <>
+              <Link
+                href="/login"
+                className="hidden md:inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition-colors hover:text-white border border-white/10 hover:border-white/20 hover:bg-white/5"
+              >
+                Log In
+              </Link>
+              <Link
+                href="/register"
+                className="hidden md:inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold bg-sky-500 hover:bg-sky-400 text-white transition-all hover:shadow-md hover:shadow-sky-500/30"
+              >
+                Sign Up
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </>
+          )}
+
 
 
           {/* Desktop: user avatar dropdown */}
@@ -150,8 +169,8 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
             </Link>
           )}
 
-          {/* Mobile: hamburger — only when there are secondary links or auth actions */}
-          {(hasSecondaryLink || isAuthenticated) && (
+          {/* Mobile: hamburger — always shown for guests (login/signup), plus auth users */}
+          {(hasSecondaryLink || isAuthenticated || !isAuthenticated) && (
             <div className="relative md:hidden" ref={mobileMenuRef}>
               <button
                 type="button"
@@ -182,6 +201,29 @@ export function AppNavbar({ isAuthenticated, userName }: AppNavbarProps) {
                     >
                       See Example
                     </Link>
+                  )}
+
+                  {/* Guest: Login + Sign Up */}
+                  {!isAuthenticated && (
+                    <>
+                      <div className="border-t border-white/5">
+                        <Link
+                          href="/login"
+                          className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Log In
+                        </Link>
+                        <Link
+                          href="/register"
+                          className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-sky-400 transition-colors hover:bg-sky-500/10 hover:text-sky-300"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                          Sign Up
+                        </Link>
+                      </div>
+                    </>
                   )}
                   {isAuthenticated && (
                     <Link
